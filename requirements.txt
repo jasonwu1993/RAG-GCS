@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+google-cloud-storage
+google-cloud-aiplatform
+numpy
+tiktoken
+pdfplumber
+openai
+python-multipart
