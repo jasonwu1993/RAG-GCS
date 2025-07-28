@@ -17,6 +17,10 @@ from typing import List, Dict, Optional
 import io
 import hashlib
 import json
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # --- Configuration & Initialization ---
 PROJECT_ID = os.getenv("GCP_PROJECT_ID")
