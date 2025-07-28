@@ -1,0 +1,31 @@
+<!-- Clair Logo SVG - PowerPoint Compatible with Correct Colors -->
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- EXACT same gradients as the working HTML version -->
+    <radialGradient id="outerGradient" cx="30%" cy="30%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="100%" stop-color="#F97316"/>
+    </radialGradient>
+    
+    <radialGradient id="innerGradient" cx="30%" cy="30%">
+      <stop offset="0%" stop-color="#FEF3C7"/>
+      <stop offset="100%" stop-color="#FB923C"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Background circle for better visibility -->
+  <rect width="1024" height="1024" fill="#f8fafc" opacity="0"/>
+  
+  <!-- Manual shadow using offset circles (PowerPoint compatible) -->
+  <circle cx="517" cy="517" r="512" fill="#00000020" opacity="0.15"/>
+  <circle cx="515" cy="515" r="512" fill="#00000015" opacity="0.1"/>
+  
+  <!-- Outer circle with EXACT same radial gradient as HTML -->
+  <circle cx="512" cy="512" r="512" fill="url(#outerGradient)"/>
+  
+  <!-- Inner circle with EXACT same radial gradient as HTML -->
+  <circle cx="512" cy="512" r="384" fill="url(#innerGradient)" stroke="none"/>
+  
+  <!-- Center circle -->
+  <circle cx="512" cy="512" r="192" fill="white"/>
+</svg>
