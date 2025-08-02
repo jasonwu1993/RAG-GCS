@@ -1,0 +1,88 @@
+# This file specifies files that are intentionally untracked by gcloud
+# when using gcloud builds submit or gcloud run deploy
+
+# Python cache and build files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Project specific
+*.log
+temp/
+tmp/
+logs/
+.secrets/
+
+# Development and backup files
+main\ before-*.py
+main\ mock*.py
+main\ full.py
+*_full.py
+test_*.py
+simple_*.py
+*_manager.py
+Rag-Backend-Test.py
+
+# Frontend (separate deployment)
+rag-frontend-vercel/
+
+# Documentation (not needed for deployment)
+*.md
+CLAUDE.md
+
+# Service account keys (security)
+service-account-key.json
+*.key
+*.pem
+
+# Testing files
+pytest.ini
+.pytest_cache/
+.coverage
+htmlcov/
