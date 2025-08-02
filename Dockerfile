@@ -16,20 +16,26 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY main.py .
-COPY service-account.json .
+# Copy modular application code
+COPY main_modular.py .
+COPY config.py core.py ai_service.py google_drive.py .
+COPY documents_router.py search_router.py chat_router.py admin_router.py .
+COPY Clair-sys-prompt.txt .
 
-# Set environment variables
+# Create symlink for backward compatibility
+RUN ln -sf main_modular.py main.py
+
+# Set environment variables for Cloud Run
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
-# Expose port
-EXPOSE 8000
+# Expose port for Cloud Run
+EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+# Health check optimized for Cloud Run
+HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=2 \
+    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
-# Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use exec form for better signal handling in Cloud Run
+CMD ["python", "main_modular.py"]
