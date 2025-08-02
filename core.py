@@ -6,6 +6,7 @@ import asyncio
 import threading
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
+import google.auth
 from google.cloud import storage, aiplatform
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -135,17 +136,24 @@ def initialize_drive_service():
     """Initialize Google Drive service"""
     global drive_service
     try:
+        # Try file-based credentials first (for local development)
         if os.path.exists(GOOGLE_SERVICE_ACCOUNT_FILE):
             credentials = service_account.Credentials.from_service_account_file(
                 GOOGLE_SERVICE_ACCOUNT_FILE,
                 scopes=['https://www.googleapis.com/auth/drive.readonly']
             )
-            drive_service = build('drive', 'v3', credentials=credentials)
-            log_debug("Google Drive service initialized successfully")
-            return True
+            log_debug("Using service account file for Google Drive")
         else:
-            log_debug("Service account file not found", {"file": GOOGLE_SERVICE_ACCOUNT_FILE})
-            return False
+            # Use default credentials (for Cloud Run)
+            credentials, _ = google.auth.default(
+                scopes=['https://www.googleapis.com/auth/drive.readonly']
+            )
+            log_debug("Using default credentials for Google Drive")
+        
+        drive_service = build('drive', 'v3', credentials=credentials)
+        log_debug("Google Drive service initialized successfully")
+        return True
+        
     except Exception as e:
         log_debug("Failed to initialize Google Drive service", {"error": str(e)})
         drive_service = None
