@@ -9,7 +9,7 @@ import io
 from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from googleapiclient.http import MediaIoBaseDownload
-from core import log_debug, track_function_entry, drive_service, bucket, storage_client
+from core import log_debug, track_function_entry, drive_service, bucket, storage_client, global_state
 from config import BUCKET_NAME
 
 class CircuitBreaker:
@@ -133,6 +133,9 @@ class UltraResilientGoogleDriveSync:
                 fields="nextPageToken, files(id, name, mimeType, modifiedTime, size, parents)"
             ).execute()
             
+            # Track API call
+            global_state.track_api_call()
+            
             items = results.get('files', [])
             
             for item in items:
@@ -187,6 +190,8 @@ class UltraResilientGoogleDriveSync:
         
         try:
             content = self._execute_with_retry(_download, operation_name=f"download_file_{file_id}")
+            # Track API call for download
+            global_state.track_api_call()
             log_debug(f"Downloaded file {file_id}, size: {len(content)} bytes")
             return content
         except Exception as e:

@@ -2,8 +2,9 @@
 # Preserves ALL original Google Drive sync functionality from main.py
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi.responses import JSONResponse
 from typing import Dict, List, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 import asyncio
 import pdfplumber
 import io
@@ -266,7 +267,7 @@ async def perform_drive_sync():
         # Update sync state
         global_state.sync_state["last_sync"] = start_time.isoformat()
         global_state.sync_state["last_sync_results"] = results
-        global_state.sync_state["next_auto_sync"] = (start_time + timedelta(minutes=10)).isoformat()
+        global_state.sync_state["next_auto_sync"] = (start_time + timedelta(hours=2)).isoformat()
         
         log_debug(f"Sync completed: {len(results['updated'])} updated, {len(results['removed'])} removed, {len(results['errors'])} errors")
         
@@ -303,21 +304,91 @@ async def get_sync_status():
     }
 
 @router.get("/list")
-def list_files():
-    """List all synced files - preserved from original main.py"""
+async def list_files():
+    """COMPLETE: File listing with hierarchical structure - enhanced from original main.py"""
     track_function_entry("list_files")
     
     try:
-        local_metadata = ultra_sync.get_local_file_metadata()
-        files = list(local_metadata.keys())
-        return {
-            "files": sorted(files),
-            "total_count": len(files),
-            "metadata_sample": dict(list(local_metadata.items())[:3]) if local_metadata else {}
+        async def get_file_structure():
+            local_metadata = ultra_sync.get_local_file_metadata()
+            
+            if not local_metadata:
+                return {
+                    "files": [],
+                    "folders": [],
+                    "file_count": 0,
+                    "folder_count": 0,
+                    "structure": "hierarchical",
+                    "status": "no_files"
+                }
+            
+            file_list = []
+            folder_set = set()
+            
+            # Process each file with enhanced metadata
+            for file_path, file_data in local_metadata.items():
+                file_info = {
+                    "path": file_path,
+                    "name": file_data.get('name', file_path.split('/')[-1]),
+                    "type": "file",
+                    "mime_type": file_data.get('mime_type', 'application/octet-stream'),
+                    "size": file_data.get('size', 0),
+                    "processed_time": file_data.get('processed_time', file_data.get('modified_time'))
+                }
+                file_list.append(file_info)
+                
+                # Add parent folders to the set
+                path_parts = file_path.split('/')
+                for i in range(len(path_parts) - 1):
+                    folder_path = '/'.join(path_parts[:i+1])
+                    if folder_path:
+                        folder_set.add(folder_path)
+            
+            # Create folder objects
+            folders = [
+                {
+                    "path": path, 
+                    "name": path.split('/')[-1], 
+                    "type": "folder"
+                } 
+                for path in sorted(folder_set)
+            ]
+            
+            return {
+                "files": file_list,
+                "folders": folders,
+                "file_count": len(file_list),
+                "folder_count": len(folders),
+                "structure": "hierarchical",
+                "status": "success",
+                "recursive_scan_enabled": True
+            }
+        
+        # Add timeout protection like original
+        result = await asyncio.wait_for(get_file_structure(), timeout=15.0)
+        
+        # Update global files found counter
+        global_state.update_files_found(result.get("file_count", 0))
+        
+        return result
+        
+    except asyncio.TimeoutError:
+        error_result = {
+            "files": [],
+            "folders": [],
+            "error": "File listing timed out",
+            "status": "timeout"
         }
+        return JSONResponse(status_code=408, content=error_result)
     except Exception as e:
         log_debug("ERROR listing files", {"error": str(e)})
-        raise HTTPException(status_code=500, detail=f"Could not list files: {str(e)}")
+        error_result = {
+            "files": [],
+            "folders": [],
+            "error": str(e),
+            "status": "error"
+        }
+        return JSONResponse(status_code=500, content=error_result)
 
 @router.post("/sync_drive")
 async def legacy_sync_drive(background_tasks: BackgroundTasks):
@@ -340,13 +411,89 @@ async def get_drive_files():
         log_debug("ERROR getting drive files", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Could not get drive files: {str(e)}")
 
+@router.get("/indexed")
+async def list_indexed_documents():
+    """List documents that are actually indexed in Vertex AI (have chunks)"""
+    track_function_entry("list_indexed_documents")
+    
+    try:
+        from core import bucket
+        
+        if not bucket:
+            raise HTTPException(status_code=503, detail="Storage service not available")
+        
+        # Get all chunks from the chunks/ directory
+        chunk_blobs = list(bucket.list_blobs(prefix="chunks/documents/"))
+        
+        # Extract unique document paths from chunk paths
+        indexed_documents = set()
+        for blob in chunk_blobs:
+            # Chunk path format: chunks/documents/folder/file.pdf/0.txt
+            # Extract: documents/folder/file.pdf
+            path_parts = blob.name.split('/')
+            if len(path_parts) >= 4:  # chunks/documents/file or chunks/documents/folder/file
+                # Reconstruct document path by removing 'chunks/' prefix and chunk filename
+                doc_path = '/'.join(path_parts[1:-1])  # Skip 'chunks' and chunk filename
+                if doc_path.startswith('documents/'):
+                    # Remove 'documents/' prefix to match expected format
+                    clean_path = doc_path[len('documents/'):]
+                    if clean_path:  # Make sure it's not empty
+                        indexed_documents.add(clean_path)
+        
+        # Convert to sorted list
+        indexed_files = sorted(list(indexed_documents))
+        
+        # Get metadata for each indexed document
+        local_metadata = ultra_sync.get_local_file_metadata()
+        file_details = []
+        
+        for file_path in indexed_files:
+            full_path = f"documents/{file_path}"
+            metadata = local_metadata.get(full_path, {})
+            
+            file_info = {
+                "path": file_path,
+                "name": file_path.split('/')[-1],
+                "indexed": True,
+                "size": metadata.get('size', 0),
+                "modified_time": metadata.get('modified_time'),
+                "last_synced": metadata.get('last_synced'),
+                "drive_id": metadata.get('drive_id')
+            }
+            file_details.append(file_info)
+        
+        return {
+            "files": indexed_files,  # Simple list for compatibility
+            "file_details": file_details,  # Detailed info for advanced use
+            "total_indexed": len(indexed_files),
+            "status": "success",
+            "source": "vertex_ai_chunks"
+        }
+        
+    except Exception as e:
+        log_debug("ERROR listing indexed documents", {"error": str(e)})
+        return {
+            "files": [],
+            "file_details": [],
+            "total_indexed": 0,
+            "status": "error",
+            "error": str(e)
+        }
+
 # Auto-sync functionality
 async def auto_sync_loop():
-    """Automatic sync every 10 minutes - preserved from original main.py"""
+    """Automatic sync every 2 hours"""
+    # Set initial next auto-sync time
+    from datetime import datetime, timedelta
+    next_sync_time = datetime.utcnow() + timedelta(hours=2)
+    global_state.sync_state["next_auto_sync"] = next_sync_time.isoformat()
+    log_debug("Auto-sync loop started", {"next_sync": next_sync_time.isoformat()})
+    
     while True:
         try:
-            await asyncio.sleep(600)  # 10 minutes
+            await asyncio.sleep(7200)  # 2 hours (7200 seconds)
             if not global_state.sync_state["is_syncing"]:
+                log_debug("Starting scheduled auto-sync", {"interval": "2 hours"})
                 await perform_drive_sync()
         except Exception as e:
             log_debug("Auto-sync error", {"error": str(e)})

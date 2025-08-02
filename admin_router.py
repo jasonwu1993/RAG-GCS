@@ -87,6 +87,16 @@ async def get_live_debug_data():
     try:
         from google_drive import ultra_sync
         
+        # Create the sync_progress structure that the frontend expects
+        sync_progress = {
+            "current_operation": "monitoring" if not global_state.sync_state["is_syncing"] else "syncing",
+            "files_found": global_state.files_found,
+            "api_calls": global_state.api_calls,
+            "folder_stack": [],  # Can be enhanced later if needed
+            "sync_steps": {},
+            "recursive_stats": {}
+        }
+        
         live_data = {
             "timestamp": datetime.utcnow().isoformat(),
             "system_health": health_check(),
@@ -112,6 +122,14 @@ async def get_live_debug_data():
                 "domain_expertise": "life_insurance",
                 "supported_intents": len(ENHANCED_INSURANCE_CONFIG["ADVANCED_INTENTS"]),
                 "supported_products": len(ENHANCED_INSURANCE_CONFIG["PRODUCT_TYPES"])
+            },
+            # Add the sync_progress at the top level for frontend compatibility
+            "sync_progress": sync_progress,
+            # Also keep it in debug_info for backward compatibility
+            "debug_info": {
+                "sync_progress": sync_progress,
+                "errors": [],  # Can be enhanced with error tracking
+                "performance_metrics": global_state.performance_metrics.copy()
             }
         }
         

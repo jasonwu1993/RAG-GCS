@@ -191,9 +191,15 @@ async def enhanced_health():
 # Documents/Sync endpoints (redirect to documents router)
 @app.get("/list_files")
 async def list_files_legacy():
-    """Legacy endpoint - redirects to documents router"""
+    """Legacy endpoint - redirects to documents router for synced files"""
     from documents_router import list_files
     return list_files()
+
+@app.get("/list_indexed_files")
+async def list_indexed_files_legacy():
+    """Legacy endpoint - redirects to documents router for Vertex AI indexed files"""
+    from documents_router import list_indexed_documents
+    return await list_indexed_documents()
 
 @app.get("/sync_status") 
 async def sync_status_legacy():

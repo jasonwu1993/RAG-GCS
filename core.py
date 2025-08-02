@@ -30,6 +30,8 @@ class GlobalState:
         self.startup_time = datetime.utcnow()
         self.function_calls = {}
         self.performance_metrics = {}
+        self.api_calls = 0
+        self.files_found = 0
         self._lock = threading.Lock()
     
     def track_request(self):
@@ -42,6 +44,14 @@ class GlobalState:
                 self.function_calls[function_name] = 0
             self.function_calls[function_name] += 1
     
+    def track_api_call(self):
+        with self._lock:
+            self.api_calls += 1
+    
+    def update_files_found(self, count: int):
+        with self._lock:
+            self.files_found = count
+    
     def get_status(self) -> Dict[str, Any]:
         with self._lock:
             uptime = datetime.utcnow() - self.startup_time
@@ -50,7 +60,9 @@ class GlobalState:
                 "total_requests": self.request_count,
                 "function_calls": self.function_calls.copy(),
                 "sync_state": self.sync_state.copy(),
-                "debug_mode": self.debug_mode
+                "debug_mode": self.debug_mode,
+                "api_calls": self.api_calls,
+                "files_found": self.files_found
             }
 
 # Global state instance
