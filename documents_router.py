@@ -25,8 +25,23 @@ except ImportError as e:
     global_state = MockState()
     bucket = None
     index_endpoint = None
-from google_drive import ultra_sync
-from ai_service import split_text, embed_text
+# Safe imports for services
+try:
+    from google_drive import ultra_sync
+    google_drive_available = True
+except ImportError as e:
+    print(f"⚠️ Google Drive import failed: {e}")
+    google_drive_available = False
+    def ultra_sync(): return {"error": "Google Drive not available"}
+
+try:
+    from ai_service import split_text, embed_text
+    ai_service_available = True
+except ImportError as e:
+    print(f"⚠️ AI service import failed: {e}")
+    ai_service_available = False
+    def split_text(text): return [text]
+    def embed_text(text): return []
 from config import DEPLOYED_INDEX_ID, TOP_K
 
 router = APIRouter(prefix="/documents", tags=["documents"])

@@ -16,11 +16,52 @@ except ImportError as e:
     def track_function_entry(name): pass
     bucket = None
     index_endpoint = None
-from ai_service import embed_text, ai_service
-from config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD, SEARCH_CONFIG, ENHANCED_INSURANCE_CONFIG
-from cache_service import cache_service
-from enhanced_search_service import faceted_search_engine, autocomplete_service
-from performance_monitor import performance_monitor
+# Safe imports for services
+try:
+    from ai_service import embed_text, ai_service
+    ai_service_available = True
+except ImportError as e:
+    print(f"⚠️ AI service import failed: {e}")
+    ai_service_available = False
+    def embed_text(text): return []
+    ai_service = None
+
+try:
+    from config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD, SEARCH_CONFIG, ENHANCED_INSURANCE_CONFIG
+    config_available = True
+except ImportError as e:
+    print(f"⚠️ Config import failed: {e}")
+    config_available = False
+    DEPLOYED_INDEX_ID = None
+    TOP_K = 5
+    SIMILARITY_THRESHOLD = 0.8
+    SEARCH_CONFIG = {}
+    ENHANCED_INSURANCE_CONFIG = {}
+
+try:
+    from cache_service import cache_service
+    cache_available = True
+except ImportError as e:
+    print(f"⚠️ Cache service import failed: {e}")
+    cache_available = False
+    cache_service = None
+
+try:
+    from enhanced_search_service import faceted_search_engine, autocomplete_service
+    enhanced_search_available = True
+except ImportError as e:
+    print(f"⚠️ Enhanced search service import failed: {e}")
+    enhanced_search_available = False
+    faceted_search_engine = None
+    autocomplete_service = None
+
+try:
+    from performance_monitor import performance_monitor
+    performance_available = True
+except ImportError as e:
+    print(f"⚠️ Performance monitor import failed: {e}")
+    performance_available = False
+    performance_monitor = None
 
 router = APIRouter(prefix="/search", tags=["search"])
 

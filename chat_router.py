@@ -16,8 +16,26 @@ except ImportError as e:
     def track_function_entry(name): pass
     bucket = None
     index_endpoint = None
-from ai_service import ai_service, embed_text
-from config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD, CLAIR_GREETING
+# Safe imports for services
+try:
+    from ai_service import ai_service, embed_text
+    ai_service_available = True
+except ImportError as e:
+    print(f"⚠️ AI service import failed: {e}")
+    ai_service_available = False
+    ai_service = None
+    def embed_text(text): return []
+
+try:
+    from config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD, CLAIR_GREETING
+    config_available = True
+except ImportError as e:
+    print(f"⚠️ Config import failed: {e}")
+    config_available = False
+    DEPLOYED_INDEX_ID = None
+    TOP_K = 5
+    SIMILARITY_THRESHOLD = 0.8
+    CLAIR_GREETING = "Hello! I'm Clair, your AI financial advisor."
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
