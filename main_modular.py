@@ -63,17 +63,17 @@ try:
 except Exception as e:
     print(f"❌ Config import failed: {e}")
 
-# System identification  
-VERSION = "6.1-PROFESSIONAL"
-BUILD_DATE = "2025-08-03"
+# System identification - EXPLICIT VERSION DEFINITION
+APP_VERSION = "6.1-PROFESSIONAL-FIXED"
+BUILD_DATE = "2025-08-03-DEBUG"
 
-print(f"🚀 Starting Enhanced RAG Clair System {VERSION} - Built {BUILD_DATE}")
+print(f"🚀 Starting Enhanced RAG Clair System {APP_VERSION} - Built {BUILD_DATE}")
 print("🏗️ Modular SOTA Architecture with Professional Financial Advisor")
 print("🎯 Using Clair-sys-prompt.txt for professional financial advisor persona")
 print("📋 DOCKERFILE DEPLOYMENT - This should show main_modular.py is running!")
 print("📁 Working directory:", os.getcwd())
 print("📁 System prompt file exists:", os.path.exists("Clair-sys-prompt.txt"))
-print(f"🔍 DEBUG: VERSION variable contains: '{VERSION}'")
+print(f"🔍 DEBUG: APP_VERSION variable contains: '{APP_VERSION}'")
 print(f"🔍 DEBUG: BUILD_DATE variable contains: '{BUILD_DATE}'")
 
 # Debug: Show what config is loaded
@@ -110,7 +110,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Enhanced RAG Clair System - SOTA Life Insurance AI",
     description="State-of-the-Art Life Insurance RAG System with Intelligent Query Routing",
-    version=VERSION,
+    version=APP_VERSION,
     lifespan=lifespan
 )
 
@@ -154,8 +154,8 @@ async def frontend_verification():
     """Specific endpoint for frontend to verify deployment details"""
     return {
         "frontend_verification": True,
-        "deployment_id": f"{VERSION}-{BUILD_DATE}",
-        "version": VERSION,
+        "deployment_id": f"{APP_VERSION}-{BUILD_DATE}",
+        "version": APP_VERSION,
         "build_date": BUILD_DATE,
         "architecture": "modular_sota",
         "system_prompt_file_exists": os.path.exists("Clair-sys-prompt.txt"),
@@ -174,12 +174,12 @@ async def enhanced_root():
         from core import get_service_status
         service_status = get_service_status()
         
-        # Debug: Print what VERSION contains at runtime
-        print(f"🔍 RUNTIME DEBUG: VERSION = '{VERSION}' (type: {type(VERSION)})")
+        # Debug: Print what APP_VERSION contains at runtime
+        print(f"🔍 RUNTIME DEBUG: APP_VERSION = '{APP_VERSION}' (type: {type(APP_VERSION)})")
         
         return {
             "message": "Enhanced RAG Clair System - SOTA Life Insurance AI",
-            "version": VERSION,
+            "version": APP_VERSION,
             "build_date": BUILD_DATE,
             "architecture": "modular_sota",
             "status": "running",
@@ -225,7 +225,7 @@ async def enhanced_root():
         # Fallback response
         return {
             "message": "Enhanced RAG Clair System - SOTA Life Insurance AI (Minimal Mode)",
-            "version": VERSION,
+            "version": APP_VERSION,
             "status": "running",
             "error": str(e),
             "timestamp": datetime.utcnow().isoformat()
@@ -262,7 +262,7 @@ async def enhanced_health():
         log_debug("Error in enhanced health check", {"error": str(e)})
         return {
             "status": "healthy",  # Always report healthy if container is running
-            "version": VERSION,
+            "version": APP_VERSION,
             "timestamp": datetime.utcnow().isoformat(),
             "container_status": "running",
             "error": str(e)
@@ -411,7 +411,7 @@ async def track_requests(request: Request, call_next):
 if __name__ == "__main__":
     try:
         port = int(os.environ.get("PORT", 8080))
-        print(f"🌟 Starting Enhanced RAG Clair System on port {port}")
+        print(f"🌟 Starting Enhanced RAG Clair System {APP_VERSION} on port {port}")
         print(f"🔗 Health check: http://localhost:{port}/health")
         print(f"📚 API docs: http://localhost:{port}/docs")
         print(f"🎯 All {17} original endpoints preserved for backward compatibility")
