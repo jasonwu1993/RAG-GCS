@@ -72,6 +72,24 @@ Rag-Backend-Test.py
 # Frontend (separate deployment)
 rag-frontend-vercel/
 
+# Frontend files in root (prevent buildpack confusion)
+package.json
+package-lock.json
+next.config.js
+postcss.config.js
+tailwind.config.js
+vercel.json
+components/
+hooks/
+pages/
+public/
+styles/
+utils/
+services/
+.next/
+out/
+node_modules/
+
 # Documentation (not needed for deployment)
 *.md
 CLAUDE.md

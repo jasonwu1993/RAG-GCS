@@ -337,7 +337,7 @@ gcloud iam service-accounts keys create service-account.json \
 #### Build and Deploy
 ```bash
 # Deploy directly from source
-gcloud run deploy clair-rag \
+gcloud run deploy rag-gcs \
   --source . \
   --platform managed \
   --region us-central1 \
@@ -350,7 +350,9 @@ gcloud run deploy clair-rag \
   --concurrency 10 \
   --max-instances 3 \
   --port 8080 \
-  --set-env-vars "OPENAI_API_KEY=$(gcloud secrets versions access latest --secret=openai-api-key --project=718538538469),GCP_PROJECT_ID=rag-backend-467204,GCS_BUCKET_NAME=rag-clair-2025,GOOGLE_DRIVE_FOLDER_ID=1pMiyyfk8hEoVVSsxMmRmobe6dmdm5sjI,DEPLOYED_INDEX_ID=rag_index_1753602198270,INDEX_ENDPOINT_ID=1251545498595098624"
+  --set-env-vars "OPENAI_API_KEY=$(gcloud secrets versions access latest --secret=openai-api-key --project=718538538469),GCP_PROJECT_ID=rag-backend-467204,GCS_BUCKET_NAME=rag-clair-2025,GOOGLE_DRIVE_FOLDER_ID=1pMiyyfk8hEoVVSsxMmRmobe6dmdm5sjI,DEPLOYED_INDEX_ID=rag_index_1753602198270,INDEX_ENDPOINT_ID=1251545498595098624, ENVIRONMENT=production,DEBUG=false,GPT_MODEL=gpt-4o,EMBED_MODEL=text-embedding-3-small,MAX_TOKENS=1000,TEMPERATURE=0.3,SIMILARITY_THRESHOLD=0.75,TOP_K=3, GCP_REGION=us-central1"
+
+
 ```
 
 #### Alternative: Docker Deploy
