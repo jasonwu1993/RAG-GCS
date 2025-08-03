@@ -30,12 +30,20 @@ from chat_router import router as chat_router
 from admin_router import router as admin_router
 from config import *
 
-# System identification
-VERSION = "6.0-MODULAR-SOTA"
-BUILD_DATE = "2025-01-02"
+# System identification  
+VERSION = "6.0-MODULAR-PROFESSIONAL-ADVISOR"
+BUILD_DATE = "2025-08-03"
 
 print(f"🚀 Starting Enhanced RAG Clair System {VERSION} - Built {BUILD_DATE}")
-print("🏗️ Modular SOTA Architecture with Life Insurance Expertise")
+print("🏗️ Modular SOTA Architecture with Professional Financial Advisor")
+print("🎯 Using Clair-sys-prompt.txt for professional financial advisor persona")
+print("📁 Working directory:", os.getcwd())
+print("📁 System prompt file exists:", os.path.exists("Clair-sys-prompt.txt"))
+
+# Debug: Show what config is loaded
+from config import CLAIR_GREETING, CLAIR_SYSTEM_PROMPT_ACTIVE
+print("📝 Greeting:", CLAIR_GREETING[:50] + "...")
+print("📝 System prompt (first 100 chars):", CLAIR_SYSTEM_PROMPT_ACTIVE[:100] + "...")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
