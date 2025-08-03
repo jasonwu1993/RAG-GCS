@@ -26,8 +26,18 @@ from fastapi.responses import JSONResponse
 try:
     from core import initialize_all_services, health_check, global_state, log_debug, track_function_entry
     print("✅ Core imports successful")
+    core_available = True
 except Exception as e:
     print(f"❌ Core import failed: {e}")
+    core_available = False
+    # Fallback functions to prevent startup failure
+    def initialize_all_services(): return {"error": "Core not available"}
+    def health_check(): return {"status": "degraded", "version": VERSION}
+    def log_debug(msg, data=None): print(f"[DEBUG] {msg}")
+    def track_function_entry(name): pass
+    class MockState: 
+        def __init__(self): self.startup_time = datetime.utcnow()
+    global_state = MockState()
 
 try:
     from documents_router import router as documents_router, auto_sync_loop
@@ -84,8 +94,12 @@ async def lifespan(app: FastAPI):
     """Enhanced lifespan management with service initialization"""
     print("🔧 Initializing Enhanced RAG Clair System...")
     
-    # Initialize all services
-    initialization_results = initialize_all_services()
+    # Initialize all services - with error handling
+    try:
+        initialization_results = initialize_all_services()
+    except Exception as e:
+        print(f"⚠️ Service initialization failed: {e}")
+        initialization_results = {"error": str(e), "services_initialized": False}
     
     print("📊 Service Initialization Results:")
     for service, status in initialization_results.items():

@@ -8,13 +8,36 @@ import threading
 import sys
 import os
 
-from core import log_debug, track_function_entry, global_state, health_check, emergency_reset, get_current_metrics, toggle_debug_mode, bucket, drive_service, index_endpoint, openai_client
+# Safe imports - only import core functions, services will be imported as needed
+try:
+    from core import log_debug, track_function_entry, global_state, health_check, emergency_reset, get_current_metrics, toggle_debug_mode
+    core_imports_successful = True
+except ImportError as e:
+    print(f"⚠️ Core import failed: {e}")
+    core_imports_successful = False
+    # Fallback functions
+    def log_debug(msg, data=None): print(f"[DEBUG] {msg}")
+    def track_function_entry(name): pass
 from config import *
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 VERSION = "6.1-PROFESSIONAL"  
 BUILD_DATE = "2025-08-03"
+
+def _get_service_status(service_name: str) -> bool:
+    """Safely check service availability"""
+    try:
+        from core import bucket, drive_service, index_endpoint, openai_client
+        services = {
+            "bucket": bucket,
+            "drive_service": drive_service, 
+            "index_endpoint": index_endpoint,
+            "openai_client": openai_client
+        }
+        return services.get(service_name) is not None
+    except ImportError:
+        return False
 
 @router.get("/debug")
 async def get_debug_info():
@@ -40,10 +63,10 @@ async def get_debug_info():
                 "port": int(os.environ.get("PORT", 8080))
             },
             "services": {
-                "storage_available": bucket is not None,
-                "drive_available": drive_service is not None,
-                "vertex_ai_available": index_endpoint is not None,
-                "openai_available": openai_client is not None
+                "storage_available": _get_service_status("bucket"),
+                "drive_available": _get_service_status("drive_service"),
+                "vertex_ai_available": _get_service_status("index_endpoint"),
+                "openai_available": _get_service_status("openai_client")
             },
             "sync_state": global_state.sync_state.copy(),
             "performance": get_current_metrics(),

@@ -440,6 +440,7 @@ def toggle_debug_mode(enabled: bool = None) -> bool:
     log_debug(f"Debug mode {'enabled' if global_state.debug_mode else 'disabled'}")
     return global_state.debug_mode
 
-# Initialize services on module import
-if __name__ != "__main__":
-    initialize_all_services()
+# Initialize services on module import - DISABLED for safe imports
+# Services will be initialized explicitly in main_modular.py lifespan
+# if __name__ != "__main__":
+#     initialize_all_services()
