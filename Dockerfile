@@ -21,8 +21,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy modular application files
 COPY . ./
-# Remove unnecessary files (keep src/ for graceful startup)
-RUN rm -rf rag-frontend-vercel/ tests/ *.md || true
+# Remove unnecessary files and conflicting directories
+RUN rm -rf rag-frontend-vercel/ tests/ *.md src/ run_server_graceful.py || true
+# Ensure we have the system prompt file
+RUN ls -la Clair-sys-prompt.txt || echo "Warning: Clair-sys-prompt.txt not found"
 
 # Set environment variables for Cloud Run
 ENV PYTHONPATH=/app
