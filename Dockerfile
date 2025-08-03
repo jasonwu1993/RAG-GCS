@@ -43,6 +43,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=2 \
     CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
-# Use exec form for better signal handling in Cloud Run  
-# Run the standard modular application (graceful version has import issues)
-CMD ["python", "-m", "uvicorn", "main_modular:app", "--host", "0.0.0.0", "--port", "8080"]
+# Run diagnostic first, then the application
+CMD ["sh", "-c", "python diagnostic.py && python -m uvicorn main_modular:app --host 0.0.0.0 --port 8080"]
