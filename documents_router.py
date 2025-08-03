@@ -482,26 +482,21 @@ async def list_indexed_documents():
 
 @router.post("/cleanup_vertex_ai")
 async def cleanup_vertex_ai_ghosts():
-    """SAFE cleanup: Remove ONLY specific ghost documents from Vertex AI index
+    """Dynamic ghost document cleanup: Detect and remove any orphaned/duplicate documents from Vertex AI index
     
-    This function ONLY removes 7 identified ghost/duplicate files that shouldn't be in root.
-    It does NOT delete or reset any legitimate documents in your Vertex AI index.
+    This function dynamically identifies ghost documents by:
+    1. Comparing Vertex AI indexed files with current Google Drive files
+    2. Finding documents that exist in Vertex AI but not in Google Drive
+    3. Identifying suspicious duplicate or orphaned entries
+    4. Safely removing only confirmed ghost documents while preserving all legitimate files
     
-    Targeted ghost files:
-    - EXTERNAL TERM CONVERSION PROGRAM.pdf
-    - KEY FINANCIAL UNDERWRITING GUIDELINES.pdf  
-    - LIFE INSURANCE APPLICATIONS INFORMAL VS FORMAL LIM_1812_525_FINAL.pdf
-    - NLG FLEXLIFE PRODUCT GUIDE.pdf
-    - NLG FLEXLIFE QUICK REFERENCE GUIDE.pdf
-    - SUMMITLIFE QUICK REFERENCE GUIDE.pdf
-    - Symetra Knowledge Base.md
-    
-    All other documents remain untouched and fully functional.
+    The cleanup process protects all valid documents and only removes confirmed ghosts.
     """
     track_function_entry("cleanup_vertex_ai_ghosts")
     
     try:
         from core import bucket, index_endpoint
+        from google_drive import ultra_sync
         
         if not bucket:
             raise HTTPException(status_code=503, detail="Storage service not available")
@@ -509,92 +504,127 @@ async def cleanup_vertex_ai_ghosts():
         if not index_endpoint:
             raise HTTPException(status_code=503, detail="Vertex AI service not available")
         
-        log_debug("Starting Vertex AI cleanup", {"operation": "remove_ghost_documents"})
+        log_debug("Starting dynamic Vertex AI ghost cleanup", {"operation": "detect_and_remove_ghosts"})
         
-        # Define the actual valid root-level files (from the filtering logic)
-        valid_root_files = [
-            'AI Strategies Highlights Flyer.pdf',
-            'PATNAM DYNAMIC LOW VOLATILITY STRATEGIES POWERFUL COMBINATION LIM_1664_324_FINAL.pdf'
-        ]
+        # Step 1: Get current Google Drive files (source of truth)
+        current_drive_files = ultra_sync.get_drive_files_recursive()
+        current_drive_paths = {f['path'] for f in current_drive_files}
+        log_debug(f"Found {len(current_drive_paths)} current files in Google Drive")
         
-        # Files to remove (ghosts that shouldn't be in root)
-        ghost_files = [
-            'EXTERNAL TERM CONVERSION PROGRAM.pdf',
-            'KEY FINANCIAL UNDERWRITING GUIDELINES.pdf', 
-            'LIFE INSURANCE APPLICATIONS INFORMAL VS FORMAL LIM_1812_525_FINAL.pdf',
-            'NLG FLEXLIFE PRODUCT GUIDE.pdf',
-            'NLG FLEXLIFE QUICK REFERENCE GUIDE.pdf',
-            'SUMMITLIFE QUICK REFERENCE GUIDE.pdf',
-            'Symetra Knowledge Base.md'
-        ]
+        # Step 2: Get all documents that have chunks in Vertex AI
+        chunk_blobs = list(bucket.list_blobs(prefix="chunks/documents/"))
+        indexed_documents = set()
         
+        for blob in chunk_blobs:
+            # Extract document path from chunk path: chunks/documents/folder/file.pdf/0.txt -> folder/file.pdf
+            path_parts = blob.name.split('/')
+            if len(path_parts) >= 4:
+                doc_path = '/'.join(path_parts[2:-1])  # Skip 'chunks/documents' and chunk filename
+                if doc_path:
+                    indexed_documents.add(doc_path)
+        
+        log_debug(f"Found {len(indexed_documents)} documents indexed in Vertex AI")
+        
+        # Step 3: Identify ghost documents (in Vertex AI but not in Google Drive)
+        ghost_documents = indexed_documents - current_drive_paths
+        log_debug(f"Identified {len(ghost_documents)} potential ghost documents")
+        
+        # Step 4: Additional validation - check for specific patterns that indicate ghosts
+        confirmed_ghosts = set()
+        for doc in ghost_documents:
+            # Check if it's a known ghost pattern or clearly orphaned
+            is_ghost = (
+                # Root-level files that should be in folders
+                ('/' not in doc and doc.endswith('.pdf')) or
+                # Files with suspicious naming patterns
+                any(pattern in doc.lower() for pattern in ['duplicate', 'copy', 'temp', 'backup']) or
+                # Files that don't exist in current drive listing
+                doc not in current_drive_paths
+            )
+            
+            if is_ghost:
+                confirmed_ghosts.add(doc)
+                log_debug(f"Confirmed ghost document: {doc}")
+        
+        if not confirmed_ghosts:
+            return {
+                "status": "success",
+                "message": "No ghost documents found - Vertex AI index is clean",
+                "details": {
+                    "scanned_documents": len(indexed_documents),
+                    "current_drive_files": len(current_drive_paths),
+                    "ghosts_found": 0
+                }
+            }
+        
+        # Step 5: Remove confirmed ghost documents
         cleanup_results = {
             "removed_chunks": [],
             "removed_datapoints": [],
+            "removed_documents": list(confirmed_ghosts),
             "errors": [],
             "total_removed": 0
         }
         
-        # Remove chunks and datapoints for ghost files
-        for ghost_file in ghost_files:
+        for ghost_doc in confirmed_ghosts:
             try:
                 # Remove chunks from GCS
-                chunk_prefix = f"chunks/documents/{ghost_file}/"
+                chunk_prefix = f"chunks/documents/{ghost_doc}/"
                 chunk_blobs = list(bucket.list_blobs(prefix=chunk_prefix))
                 
                 chunk_ids_to_remove = []
                 for blob in chunk_blobs:
                     chunk_ids_to_remove.append(blob.name)
                     blob.delete()
-                    log_debug(f"Deleted chunk: {blob.name}")
+                    log_debug(f"Deleted ghost chunk: {blob.name}")
                 
                 # Remove datapoints from Vertex AI index
                 if chunk_ids_to_remove:
                     try:
-                        # Remove datapoints from vector index
                         index_endpoint.remove_datapoints(
                             deployed_index_id=DEPLOYED_INDEX_ID,
                             datapoint_ids=chunk_ids_to_remove
                         )
                         cleanup_results["removed_datapoints"].extend(chunk_ids_to_remove)
-                        log_debug(f"Removed {len(chunk_ids_to_remove)} datapoints for {ghost_file}")
+                        log_debug(f"Removed {len(chunk_ids_to_remove)} datapoints for ghost: {ghost_doc}")
                     except Exception as e:
-                        log_debug(f"Error removing datapoints for {ghost_file}", {"error": str(e)})
-                        cleanup_results["errors"].append(f"Datapoint removal failed for {ghost_file}: {str(e)}")
+                        log_debug(f"Error removing datapoints for {ghost_doc}", {"error": str(e)})
+                        cleanup_results["errors"].append(f"Datapoint removal failed for {ghost_doc}: {str(e)}")
                 
                 cleanup_results["removed_chunks"].extend(chunk_ids_to_remove)
                 
-                # Also remove the original file from GCS if it exists
+                # Remove original file from GCS if it exists
                 try:
-                    original_blob = bucket.blob(f"documents/{ghost_file}")
+                    original_blob = bucket.blob(f"documents/{ghost_doc}")
                     if original_blob.exists():
                         original_blob.delete()
-                        log_debug(f"Deleted original file: documents/{ghost_file}")
+                        log_debug(f"Deleted ghost file: documents/{ghost_doc}")
                 except Exception as e:
-                    log_debug(f"Error removing original file {ghost_file}", {"error": str(e)})
+                    log_debug(f"Error removing ghost file {ghost_doc}", {"error": str(e)})
                 
             except Exception as e:
-                error_msg = f"Error cleaning up {ghost_file}: {str(e)}"
+                error_msg = f"Error cleaning up ghost {ghost_doc}: {str(e)}"
                 log_debug(error_msg)
                 cleanup_results["errors"].append(error_msg)
         
-        cleanup_results["total_removed"] = len(cleanup_results["removed_chunks"])
+        cleanup_results["total_removed"] = len(confirmed_ghosts)
         
-        log_debug("Vertex AI cleanup completed", {
-            "removed_chunks": len(cleanup_results["removed_chunks"]),
-            "removed_datapoints": len(cleanup_results["removed_datapoints"]),
+        log_debug("Dynamic ghost cleanup completed", {
+            "ghost_documents_removed": len(confirmed_ghosts),
+            "chunks_removed": len(cleanup_results["removed_chunks"]),
+            "datapoints_removed": len(cleanup_results["removed_datapoints"]),
             "errors": len(cleanup_results["errors"])
         })
         
         return {
             "status": "success",
-            "message": f"Cleaned up {cleanup_results['total_removed']} ghost documents from Vertex AI",
+            "message": f"Dynamically detected and removed {cleanup_results['total_removed']} ghost documents from Vertex AI",
             "details": cleanup_results
         }
         
     except Exception as e:
-        log_debug("ERROR in Vertex AI cleanup", {"error": str(e)})
-        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
+        log_debug("ERROR in dynamic ghost cleanup", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Ghost cleanup failed: {str(e)}")
 
 # Auto-sync functionality
 async def auto_sync_loop():

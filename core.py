@@ -307,11 +307,24 @@ def health_check() -> Dict[str, Any]:
     return health_status
 
 def emergency_reset():
-    """Emergency reset of all services and state"""
+    """Emergency reset of app state and services (does NOT touch Vertex AI knowledge base)
+    
+    This function only clears:
+    - Local app state and caches
+    - Service connections 
+    - Session data and metrics
+    
+    It does NOT:
+    - Delete or modify any documents in Vertex AI
+    - Remove any indexed files or chunks
+    - Touch the knowledge base content
+    
+    After reset, the app will reload file structure from Vertex AI and restore normal operation.
+    """
     track_function_entry("emergency_reset")
     
     try:
-        # Reset global state
+        # Reset only local app state - NOT Vertex AI data
         global_state.sync_state = {
             "is_syncing": False,
             "last_sync": None,
@@ -320,15 +333,20 @@ def emergency_reset():
         }
         global_state.request_count = 0
         global_state.function_calls = {}
+        global_state.performance_metrics = {}
+        global_state.api_calls = 0
+        global_state.files_found = 0
+        global_state.reset_circuit_breaker()
         
-        # Reinitialize services
+        # Reinitialize service connections (not data)
         initialization_results = initialize_all_services()
         
-        log_debug("Emergency reset completed", initialization_results)
+        log_debug("Emergency reset completed - app state cleared, Vertex AI knowledge base preserved", initialization_results)
         return {
             "status": "reset_completed",
             "timestamp": datetime.utcnow().isoformat(),
-            "reinitialization": initialization_results
+            "reinitialization": initialization_results,
+            "message": "App state reset successfully - knowledge base preserved"
         }
     except Exception as e:
         log_debug("Emergency reset failed", {"error": str(e)})

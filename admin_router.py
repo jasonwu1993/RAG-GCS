@@ -145,26 +145,28 @@ async def get_live_debug_data():
 
 @router.post("/emergency_reset")
 async def perform_emergency_reset():
-    """Emergency system reset - preserved from original main.py"""
+    """Emergency app reset - clears app state and reloads from Vertex AI (preserves knowledge base)"""
     track_function_entry("perform_emergency_reset")
     
     try:
         log_debug("EMERGENCY RESET initiated by admin request")
         
-        # Perform emergency reset
+        # Perform emergency reset (app state only, preserves Vertex AI)
         reset_result = emergency_reset()
         
         # Additional modular system reset
         global_state.debug_mode = False
         global_state.performance_metrics.clear()
         
-        log_debug("EMERGENCY RESET completed successfully")
+        log_debug("EMERGENCY RESET completed successfully - triggering app reinitialization")
         
+        # The frontend will handle reloading documents and auto-selection after this response
         return {
-            "message": "Emergency reset completed successfully",
+            "message": "Emergency reset completed - app will reload from Vertex AI",
             "reset_result": reset_result,
             "timestamp": datetime.utcnow().isoformat(),
-            "status": "system_reset_complete"
+            "status": "system_reset_complete",
+            "next_steps": "App will now reload file structure from Vertex AI and auto-select all files"
         }
         
     except Exception as e:
