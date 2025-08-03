@@ -1,12 +1,16 @@
-# Search Router - Advanced Document Search with Life Insurance Expertise
+# Enhanced Search Router - Advanced Document Search with Performance Optimization
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
 from typing import Dict, List, Any, Optional
 from datetime import datetime
+import time
 
 from core import log_debug, track_function_entry, bucket, index_endpoint
 from ai_service import embed_text, ai_service
 from config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD, SEARCH_CONFIG, ENHANCED_INSURANCE_CONFIG
+from cache_service import cache_service
+from enhanced_search_service import faceted_search_engine, autocomplete_service
+from performance_monitor import performance_monitor
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -339,3 +343,134 @@ async def get_search_statistics():
     except Exception as e:
         log_debug("ERROR getting search statistics", {"error": str(e)})
         raise HTTPException(status_code=500, detail=f"Could not get search statistics: {str(e)}")
+
+# Enhanced Search Endpoints with Performance Optimization
+
+@router.post("/advanced")
+async def advanced_faceted_search(request: Request):
+    """Advanced faceted search with multiple filtering dimensions"""
+    track_function_entry("advanced_faceted_search")
+    
+    try:
+        data = await request.json()
+        query = data.get("query", "")
+        facet_filters = data.get("facet_filters", {})
+        limit = data.get("limit", TOP_K)
+        
+        if not query or not query.strip():
+            raise HTTPException(status_code=400, detail="Query not provided")
+        
+        # Add to autocomplete history
+        autocomplete_service.add_to_history(query)
+        
+        # Perform faceted search
+        result = await faceted_search_engine.search_with_facets(
+            query=query,
+            facet_filters=facet_filters,
+            limit=limit
+        )
+        
+        log_debug("Advanced search completed", {
+            "query": query,
+            "facets": facet_filters,
+            "results": len(result.get("results", [])),
+            "cache_hit": result.get("search_metrics", {}).get("cache_hit", False)
+        })
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_debug("ERROR in advanced search", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Advanced search failed: {str(e)}")
+
+@router.get("/autocomplete")
+async def get_autocomplete_suggestions(q: str, limit: int = 5):
+    """Get auto-complete suggestions for search queries"""
+    track_function_entry("get_autocomplete_suggestions")
+    
+    try:
+        if len(q.strip()) < 2:
+            return {"suggestions": []}
+        
+        suggestions = autocomplete_service.get_suggestions(q, limit)
+        
+        return {
+            "query": q,
+            "suggestions": suggestions,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        log_debug("ERROR getting autocomplete", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Autocomplete failed: {str(e)}")
+
+@router.get("/facets")
+async def get_available_facets():
+    """Get available facets for filtering"""
+    track_function_entry("get_available_facets")
+    
+    try:
+        return {
+            "facets": faceted_search_engine.facets,
+            "description": {
+                "document_type": "Type of document (guide, application, policy, etc.)",
+                "product_type": "Life insurance product type",
+                "topic": "Main topic or subject area",
+                "complexity": "Content complexity level",
+                "audience": "Target audience for the content"
+            }
+        }
+        
+    except Exception as e:
+        log_debug("ERROR getting facets", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Could not get facets: {str(e)}")
+
+@router.get("/performance")
+async def get_search_performance():
+    """Get search performance metrics and analytics"""
+    track_function_entry("get_search_performance")
+    
+    try:
+        # Get cache statistics
+        cache_stats = cache_service.get_cache_statistics()
+        
+        # Get performance dashboard
+        performance_dashboard = performance_monitor.get_performance_dashboard(time_window_minutes=60)
+        
+        # Get real-time metrics
+        real_time_metrics = performance_monitor.get_real_time_metrics()
+        
+        return {
+            "cache_performance": cache_stats,
+            "api_performance": performance_dashboard,
+            "real_time_metrics": real_time_metrics,
+            "search_optimization": {
+                "faceted_search_enabled": True,
+                "autocomplete_enabled": True,
+                "query_optimization_enabled": True,
+                "embedding_cache_enabled": True
+            }
+        }
+        
+    except Exception as e:
+        log_debug("ERROR getting search performance", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Could not get performance metrics: {str(e)}")
+
+@router.post("/clear_cache")
+async def clear_search_cache():
+    """Clear search-related caches"""
+    track_function_entry("clear_search_cache")
+    
+    try:
+        cache_service.clear_all_caches()
+        
+        return {
+            "message": "Search caches cleared successfully",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        log_debug("ERROR clearing cache", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Could not clear cache: {str(e)}")
