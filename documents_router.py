@@ -264,18 +264,18 @@ async def perform_drive_sync():
         # Save updated metadata
         ultra_sync.save_local_file_metadata(local_metadata)
         
-        # Update sync state
-        global_state.sync_state["last_sync"] = start_time.isoformat()
-        global_state.sync_state["last_sync_results"] = results
-        global_state.sync_state["next_auto_sync"] = (start_time + timedelta(hours=2)).isoformat()
+        # Update sync state atomically with persistence
+        global_state.update_sync_completion(start_time, results)
         
         log_debug(f"Sync completed: {len(results['updated'])} updated, {len(results['removed'])} removed, {len(results['errors'])} errors")
         
     except Exception as e:
         log_debug("Sync failed", {"error": str(e)})
         global_state.sync_state["last_sync_results"] = {"error": str(e)}
+        global_state.persist_sync_state()  # Persist error state
     finally:
         global_state.sync_state["is_syncing"] = False
+        global_state.persist_sync_state()  # Persist final state
 
 # API Endpoints - ALL preserved from original main.py
 

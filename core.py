@@ -35,6 +35,9 @@ class GlobalState:
         self.files_found = 0
         self._lock = threading.Lock()
         
+        # Initialize persistent state restoration
+        self._initialize_persistent_state()
+        
         # Circuit breaker for request overload protection
         self.circuit_breaker = {
             "is_open": False,
@@ -127,6 +130,62 @@ class GlobalState:
                 "files_found": self.files_found,
                 "circuit_breaker": self.circuit_breaker.copy()
             }
+    
+    def _initialize_persistent_state(self):
+        """Restore sync state from GCS on startup"""
+        try:
+            # Get bucket reference if available
+            from google.cloud import storage
+            if PROJECT_ID and BUCKET_NAME:
+                storage_client = storage.Client(project=PROJECT_ID)
+                bucket = storage_client.bucket(BUCKET_NAME)
+                
+                state_blob = bucket.blob("system_state.json")
+                if state_blob.exists():
+                    stored_state = json.loads(state_blob.download_as_text())
+                    if "sync_state" in stored_state:
+                        self.sync_state.update(stored_state["sync_state"])
+                        log_debug("Restored sync state from persistent storage", {
+                            "last_sync": self.sync_state.get("last_sync"),
+                            "restored_keys": list(stored_state["sync_state"].keys())
+                        })
+        except Exception as e:
+            log_debug("Could not restore sync state, using defaults", {"error": str(e)})
+    
+    def persist_sync_state(self):
+        """Persist sync state to GCS immediately"""
+        try:
+            # Get global bucket reference
+            if bucket:
+                state_data = {
+                    "sync_state": self.sync_state,
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "version": "1.0"
+                }
+                state_blob = bucket.blob("system_state.json")
+                state_blob.upload_from_string(json.dumps(state_data, indent=2))
+                log_debug("Persisted sync state to GCS", {
+                    "last_sync": self.sync_state.get("last_sync"),
+                    "is_syncing": self.sync_state.get("is_syncing")
+                })
+        except Exception as e:
+            log_debug("Failed to persist sync state", {"error": str(e)})
+    
+    def update_sync_completion(self, start_time: datetime, results: Dict):
+        """Atomically update and persist sync completion"""
+        with self._lock:
+            self.sync_state.update({
+                "last_sync": start_time.isoformat(),
+                "last_sync_results": results,
+                "next_auto_sync": (start_time + timedelta(hours=2)).isoformat(),
+                "is_syncing": False
+            })
+            # Persist immediately after update
+            self.persist_sync_state()
+            log_debug("Sync completion updated and persisted", {
+                "last_sync": self.sync_state["last_sync"],
+                "files_updated": len(results.get("updated", [])) if results else 0
+            })
 
 # Global state instance
 global_state = GlobalState()

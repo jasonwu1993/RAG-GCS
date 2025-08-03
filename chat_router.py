@@ -96,25 +96,35 @@ async def enhanced_ask_question(request: Request):
         # Prepare context for AI processing
         context = "\n\n---\n\n".join(relevant_chunks) if relevant_chunks else ""
         
-        # Use intelligent AI service for response generation
-        ai_result = ai_service.process_query(query, context, filters)
+        # Extract session ID for conversation awareness
+        session_id = data.get("session_id", f"session_{int(datetime.utcnow().timestamp())}")
         
-        # Combine original response format with enhanced data
+        # Use GPT-level AI service for response generation
+        ai_result = await ai_service.process_query_with_gpt_intelligence(
+            query=query, 
+            context=context, 
+            session_id=session_id,
+            filters=filters
+        )
+        
+        # Enhanced GPT-level response format
         response = {
             "answer": ai_result["answer"],
+            "session_id": session_id,
             "context_used": bool(context.strip()),
+            "conversation_aware": ai_result.get("conversation_aware", False),
+            "internet_enhanced": ai_result.get("internet_enhanced", False),
             "documents_found": len(relevant_chunks),
             "highest_similarity_score": highest_score,
             "filters_applied": filters,
             
-            # Enhanced SOTA features
-            "intelligence": {
-                "intent": ai_result["intent"],
-                "confidence": ai_result["confidence"],
-                "strategy": ai_result["strategy"],
-                "entities": ai_result["entities"],
-                "priority": ai_result["priority"]
-            },
+            # GPT-level capabilities
+            "capabilities": ai_result.get("gpt_level_features", {
+                "conversation_memory": True,
+                "internet_access": True,
+                "enhanced_reasoning": True,
+                "domain_expertise": "life_insurance"
+            }),
             "processing": {
                 "processing_time": ai_result["processing_time_seconds"],
                 "token_usage": ai_result.get("token_usage", {}),
@@ -123,10 +133,12 @@ async def enhanced_ask_question(request: Request):
             "metadata": context_metadata
         }
         
-        log_debug("Enhanced query processing completed", {
-            "intent": ai_result["intent"],
-            "confidence": ai_result["confidence"],
-            "documents_used": len(relevant_chunks)
+        log_debug("GPT-level query processing completed", {
+            "session_id": session_id,
+            "conversation_aware": ai_result.get("conversation_aware", False),
+            "internet_enhanced": ai_result.get("internet_enhanced", False),
+            "documents_used": len(relevant_chunks),
+            "tokens_used": ai_result.get("token_usage", {}).get("total_tokens", 0)
         })
         
         return response
@@ -144,6 +156,52 @@ async def enhanced_ask_question(request: Request):
             "error": str(e),
             "fallback_mode": True
         }
+
+@router.post("/conversation/clear")
+async def clear_conversation(request: Request):
+    """Clear conversation history for a session"""
+    track_function_entry("clear_conversation")
+    
+    try:
+        data = await request.json()
+        session_id = data.get("session_id")
+        
+        if not session_id:
+            raise HTTPException(status_code=400, detail="Session ID required")
+        
+        ai_service.conversation_manager.clear_conversation(session_id)
+        
+        return {
+            "message": "Conversation history cleared",
+            "session_id": session_id,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_debug("Error clearing conversation", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Could not clear conversation: {str(e)}")
+
+@router.get("/conversation/status/{session_id}")
+async def get_conversation_status(session_id: str):
+    """Get conversation status and history length"""
+    track_function_entry("get_conversation_status")
+    
+    try:
+        conversation_history = ai_service.conversation_manager.get_conversation_context(session_id)
+        
+        return {
+            "session_id": session_id,
+            "conversation_turns": len(conversation_history) // 2,
+            "total_messages": len(conversation_history),
+            "has_history": len(conversation_history) > 0,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        log_debug("Error getting conversation status", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Could not get conversation status: {str(e)}")
 
 @router.post("/feedback")
 async def submit_feedback(request: Request):

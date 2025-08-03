@@ -3,12 +3,75 @@
 
 import re
 import json
+import time
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
 import tiktoken
 from openai import OpenAI
-from config import ENHANCED_INSURANCE_CONFIG, SYSTEM_PROMPTS, GPT_MODEL, MAX_TOKENS, TEMPERATURE, EMBED_MODEL
+from config import (ENHANCED_INSURANCE_CONFIG, SYSTEM_PROMPTS, GPT_MODEL, MAX_TOKENS, TEMPERATURE, EMBED_MODEL,
+                   CLAIR_SYSTEM_PROMPT, CONVERSATION_MEMORY_ENABLED, INTERNET_ACCESS_ENABLED, MAX_CONVERSATION_HISTORY)
 from core import log_debug, track_function_entry, openai_client
+
+class ConversationManager:
+    """Manages conversation context and memory for GPT-level intelligence"""
+    
+    def __init__(self):
+        self.conversations = {}
+        self.max_history = MAX_CONVERSATION_HISTORY
+        
+    def add_exchange(self, session_id: str, user_message: str, assistant_response: str):
+        """Add a complete user-assistant exchange"""
+        if session_id not in self.conversations:
+            self.conversations[session_id] = []
+            
+        self.conversations[session_id].extend([
+            {"role": "user", "content": user_message},
+            {"role": "assistant", "content": assistant_response}
+        ])
+        
+        # Trim to max history
+        if len(self.conversations[session_id]) > self.max_history:
+            self.conversations[session_id] = self.conversations[session_id][-self.max_history:]
+        
+        log_debug("Added conversation exchange", {
+            "session_id": session_id,
+            "history_length": len(self.conversations[session_id])
+        })
+    
+    def get_conversation_context(self, session_id: str) -> List[Dict]:
+        """Get conversation history for context"""
+        return self.conversations.get(session_id, [])
+    
+    def clear_conversation(self, session_id: str):
+        """Clear conversation history"""
+        if session_id in self.conversations:
+            del self.conversations[session_id]
+            log_debug("Cleared conversation", {"session_id": session_id})
+
+class InternetSearchService:
+    """Handles internet search for real-time information"""
+    
+    def __init__(self):
+        self.search_enabled = INTERNET_ACCESS_ENABLED
+    
+    def detect_internet_need(self, query: str) -> bool:
+        """Detect if query needs internet search"""
+        internet_indicators = [
+            "current", "latest", "recent", "today", "now", "2024", "2025",
+            "news", "update", "market", "price", "rate", "trend", "stock",
+            "what's new", "happening now", "current events"
+        ]
+        return any(indicator in query.lower() for indicator in internet_indicators)
+    
+    async def search_internet(self, query: str) -> str:
+        """Perform internet search (placeholder for future implementation)"""
+        if not self.search_enabled:
+            return ""
+        
+        # TODO: Integrate with search API (Google, Bing, etc.)
+        # For now, return indicator that internet search would be performed
+        log_debug("Internet search requested", {"query": query})
+        return f"[Note: Would perform internet search for current information about: {query}]"
 
 class AIQueryClassifier:
     """Advanced query classification for life insurance domain"""
@@ -254,11 +317,13 @@ class AIResponseGenerator:
             }
 
 class IntelligentAIService:
-    """Main AI service with intelligent routing and response generation"""
+    """Main AI service with GPT-level intelligence and conversation awareness"""
     
     def __init__(self):
         self.classifier = AIQueryClassifier()
         self.generator = AIResponseGenerator()
+        self.conversation_manager = ConversationManager()
+        self.internet_service = InternetSearchService()
     
     def process_query(self, query: str, context: str = "", filters: List[str] = None) -> Dict[str, Any]:
         """Process a query with full AI intelligence"""
@@ -300,6 +365,112 @@ class IntelligentAIService:
         })
         
         return result
+    
+    async def process_query_with_gpt_intelligence(
+        self, 
+        query: str, 
+        context: str = "", 
+        session_id: str = "default",
+        filters: List[str] = None
+    ) -> Dict[str, Any]:
+        """GPT-level query processing with conversation awareness"""
+        track_function_entry("process_query_with_gpt_intelligence")
+        
+        start_time = datetime.utcnow()
+        
+        # 1. Get conversation history
+        conversation_history = []
+        if CONVERSATION_MEMORY_ENABLED:
+            conversation_history = self.conversation_manager.get_conversation_context(session_id)
+        
+        # 2. Detect if internet search needed
+        needs_internet = self.internet_service.detect_internet_need(query)
+        internet_context = ""
+        if needs_internet:
+            internet_context = await self.internet_service.search_internet(query)
+        
+        # 3. Build enhanced context
+        enhanced_context_parts = []
+        if context.strip():
+            enhanced_context_parts.append(f"KNOWLEDGE BASE CONTEXT:\n{context}")
+        if internet_context:
+            enhanced_context_parts.append(f"CURRENT INFORMATION:\n{internet_context}")
+        
+        enhanced_context = "\n\n".join(enhanced_context_parts)
+        
+        # 4. Build messages for GPT-level conversation
+        messages = [
+            {"role": "system", "content": CLAIR_SYSTEM_PROMPT}
+        ]
+        
+        # Add conversation history
+        messages.extend(conversation_history)
+        
+        # Add current query with enhanced context
+        if enhanced_context.strip():
+            user_message = f"""{enhanced_context}
+
+QUESTION: {query}"""
+        else:
+            user_message = f"""QUESTION: {query}
+
+Note: No specific document context available from our knowledge base. Please use your general knowledge and provide a comprehensive, helpful response."""
+        
+        messages.append({"role": "user", "content": user_message})
+        
+        # 5. Generate GPT-level response
+        try:
+            response = openai_client.chat.completions.create(
+                model=GPT_MODEL,
+                messages=messages,
+                max_tokens=MAX_TOKENS * 2,  # Allow longer responses for GPT-level quality
+                temperature=TEMPERATURE,
+                stream=False
+            )
+            
+            answer = response.choices[0].message.content
+            
+            # 6. Save conversation exchange if memory enabled
+            if CONVERSATION_MEMORY_ENABLED:
+                self.conversation_manager.add_exchange(session_id, query, answer)
+            
+            # 7. Enhanced result with GPT-level metadata
+            result = {
+                "answer": answer,
+                "query": query,
+                "session_id": session_id,
+                "conversation_aware": len(conversation_history) > 0,
+                "internet_enhanced": bool(internet_context),
+                "context_used": bool(context.strip()),
+                "processing_time_seconds": (datetime.utcnow() - start_time).total_seconds(),
+                "token_usage": {
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens
+                },
+                "gpt_level_features": {
+                    "conversation_memory": CONVERSATION_MEMORY_ENABLED,
+                    "internet_access": INTERNET_ACCESS_ENABLED,
+                    "enhanced_reasoning": True,
+                    "domain_expertise": "life_insurance"
+                },
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+            log_debug("GPT-level query processed", {
+                "session_id": session_id,
+                "conversation_turns": len(conversation_history) // 2,
+                "internet_used": bool(internet_context),
+                "context_used": bool(context.strip()),
+                "tokens_used": response.usage.total_tokens
+            })
+            
+            return result
+            
+        except Exception as e:
+            log_debug("Error in GPT-level processing", {"error": str(e)})
+            # Fallback to domain-specific processing
+            return self.process_query(query, context, filters)
 
 # Global AI service instance
 ai_service = IntelligentAIService()
