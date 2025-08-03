@@ -482,7 +482,22 @@ async def list_indexed_documents():
 
 @router.post("/cleanup_vertex_ai")
 async def cleanup_vertex_ai_ghosts():
-    """Clean up ghost/duplicate documents from Vertex AI index"""
+    """SAFE cleanup: Remove ONLY specific ghost documents from Vertex AI index
+    
+    This function ONLY removes 7 identified ghost/duplicate files that shouldn't be in root.
+    It does NOT delete or reset any legitimate documents in your Vertex AI index.
+    
+    Targeted ghost files:
+    - EXTERNAL TERM CONVERSION PROGRAM.pdf
+    - KEY FINANCIAL UNDERWRITING GUIDELINES.pdf  
+    - LIFE INSURANCE APPLICATIONS INFORMAL VS FORMAL LIM_1812_525_FINAL.pdf
+    - NLG FLEXLIFE PRODUCT GUIDE.pdf
+    - NLG FLEXLIFE QUICK REFERENCE GUIDE.pdf
+    - SUMMITLIFE QUICK REFERENCE GUIDE.pdf
+    - Symetra Knowledge Base.md
+    
+    All other documents remain untouched and fully functional.
+    """
     track_function_entry("cleanup_vertex_ai_ghosts")
     
     try:
