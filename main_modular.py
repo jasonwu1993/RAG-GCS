@@ -22,13 +22,46 @@ from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-# Import all modular components
-from core import initialize_all_services, health_check, global_state, log_debug, track_function_entry
-from documents_router import router as documents_router, auto_sync_loop
-from search_router import router as search_router  
-from chat_router import router as chat_router
-from admin_router import router as admin_router
-from config import *
+# Import core components only - simplified for debugging
+try:
+    from core import initialize_all_services, health_check, global_state, log_debug, track_function_entry
+    print("✅ Core imports successful")
+except Exception as e:
+    print(f"❌ Core import failed: {e}")
+
+try:
+    from documents_router import router as documents_router, auto_sync_loop
+    print("✅ Documents router import successful")
+except Exception as e:
+    print(f"❌ Documents router import failed: {e}")
+    documents_router = None
+
+try:
+    from search_router import router as search_router  
+    print("✅ Search router import successful")
+except Exception as e:
+    print(f"❌ Search router import failed: {e}")
+    search_router = None
+
+try:
+    from chat_router import router as chat_router
+    print("✅ Chat router import successful")
+except Exception as e:
+    print(f"❌ Chat router import failed: {e}")
+    chat_router = None
+
+try:
+    from admin_router import router as admin_router
+    print("✅ Admin router import successful")
+except Exception as e:
+    print(f"❌ Admin router import failed: {e}")
+    admin_router = None
+
+try:
+    from config import *
+    print("✅ Config import successful")
+except Exception as e:
+    print(f"❌ Config import failed: {e}")
 
 # System identification  
 VERSION = "6.0-MODULAR-PROFESSIONAL-ADVISOR"
@@ -58,9 +91,12 @@ async def lifespan(app: FastAPI):
         status_icon = "✅" if status else "❌"
         print(f"   {status_icon} {service}: {'OK' if status else 'FAILED'}")
     
-    # Start auto-sync loop
-    print("🔄 Starting auto-sync background task...")
-    asyncio.create_task(auto_sync_loop())
+    # Start auto-sync loop if available
+    if 'auto_sync_loop' in globals():
+        print("🔄 Starting auto-sync background task...")
+        asyncio.create_task(auto_sync_loop())
+    else:
+        print("⚠️ Auto-sync not available - documents_router import failed")
     
     print("🎯 Enhanced RAG Clair System ready for requests!")
     yield
@@ -84,11 +120,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include all modular routers
-app.include_router(documents_router)
-app.include_router(search_router)
-app.include_router(chat_router)
-app.include_router(admin_router)
+# Include modular routers (if available)
+if documents_router:
+    app.include_router(documents_router)
+    print("✅ Documents router included")
+else:
+    print("⚠️ Documents router not available")
+
+if search_router:
+    app.include_router(search_router)
+    print("✅ Search router included")
+else:
+    print("⚠️ Search router not available")
+
+if chat_router:
+    app.include_router(chat_router)
+    print("✅ Chat router included")
+else:
+    print("⚠️ Chat router not available")
+
+if admin_router:
+    app.include_router(admin_router)
+    print("✅ Admin router included")
+else:
+    print("⚠️ Admin router not available")
 
 # Root endpoint - enhanced but backward compatible
 @app.get("/")
