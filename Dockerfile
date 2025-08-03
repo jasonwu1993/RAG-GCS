@@ -19,12 +19,13 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy enterprise application structure
-COPY src/ ./src/
-COPY run_server_graceful.py ./
+# Copy modular application files
+COPY . ./
+# Remove unnecessary files
+RUN rm -rf rag-frontend-vercel/ src/ tests/ *.md || true
 
 # Set environment variables for Cloud Run
-ENV PYTHONPATH=/app/src:/app
+ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -42,4 +43,4 @@ HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=2 \
 
 # Use exec form for better signal handling in Cloud Run  
 # Run the graceful application that handles service failures
-CMD ["python", "run_server_graceful.py"]
+CMD ["python", "-m", "uvicorn", "main_modular:app", "--host", "0.0.0.0", "--port", "8080"]
