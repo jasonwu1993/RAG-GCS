@@ -89,7 +89,7 @@ async def enhanced_root():
     track_function_entry("enhanced_root")
     
     try:
-        from core import get_service_status
+        from shared.utils.core_utils import get_service_status
         service_status = get_service_status()
         
         return {
@@ -192,106 +192,106 @@ async def enhanced_health():
 @app.get("/list_files")
 async def list_files_legacy():
     """Legacy endpoint - redirects to documents router for synced files"""
-    from documents_router import list_files
+    from api.v1.routes.documents_router import list_files
     return list_files()
 
 @app.get("/list_indexed_files")
 async def list_indexed_files_legacy():
     """Legacy endpoint - redirects to documents router for Vertex AI indexed files"""
-    from documents_router import list_indexed_documents
+    from api.v1.routes.documents_router import list_indexed_documents
     return await list_indexed_documents()
 
 @app.get("/sync_status") 
 async def sync_status_legacy():
     """Legacy endpoint - redirects to documents router"""
-    from documents_router import get_sync_status
+    from api.v1.routes.documents_router import get_sync_status
     return await get_sync_status()
 
 @app.post("/sync_drive")
 async def sync_drive_legacy(background_tasks: BackgroundTasks):
     """Legacy endpoint - redirects to documents router"""
-    from documents_router import sync_google_drive
+    from api.v1.routes.documents_router import sync_google_drive
     return await sync_google_drive(background_tasks)
 
 @app.post("/sync_drive_recursive")
 async def sync_drive_recursive_legacy(background_tasks: BackgroundTasks):
     """Legacy endpoint - redirects to documents router"""
-    from documents_router import sync_google_drive
+    from api.v1.routes.documents_router import sync_google_drive
     return await sync_google_drive(background_tasks)
 
 @app.post("/sync_drive_force")
 async def sync_drive_force_legacy(background_tasks: BackgroundTasks):
     """Legacy endpoint - redirects to documents router"""
-    from documents_router import sync_google_drive
+    from api.v1.routes.documents_router import sync_google_drive
     return await sync_google_drive(background_tasks)
 
 @app.post("/cleanup_vertex_ai")
 async def cleanup_vertex_ai_legacy():
     """Legacy endpoint - redirects to documents router"""
-    from documents_router import cleanup_vertex_ai_ghosts
+    from api.v1.routes.documents_router import cleanup_vertex_ai_ghosts
     return await cleanup_vertex_ai_ghosts()
 
 # Chat/AI endpoints (redirect to chat router)
 @app.post("/ask")
 async def ask_legacy(request: Request):
     """Legacy ask endpoint - redirects to enhanced chat router"""
-    from chat_router import enhanced_ask_question
+    from api.v1.routes.chat_router import enhanced_ask_question
     return await enhanced_ask_question(request)
 
 @app.post("/feedback")
 async def feedback_legacy(request: Request):
     """Legacy feedback endpoint - redirects to chat router"""
-    from chat_router import submit_feedback
+    from api.v1.routes.chat_router import submit_feedback
     return await submit_feedback(request)
 
 # Admin/Debug endpoints (redirect to admin router)
 @app.get("/debug")
 async def debug_legacy():
     """Legacy debug endpoint - redirects to admin router"""
-    from admin_router import get_debug_info
+    from api.v1.routes.admin_router import get_debug_info
     return await get_debug_info()
 
 @app.get("/debug_live")
 async def debug_live_legacy():
     """Legacy debug live endpoint - redirects to admin router"""
-    from admin_router import get_live_debug_data
+    from api.v1.routes.admin_router import get_live_debug_data
     return await get_live_debug_data()
 
 @app.post("/emergency_reset")
 async def emergency_reset_legacy():
     """Legacy emergency reset endpoint - redirects to admin router"""
-    from admin_router import perform_emergency_reset
+    from api.v1.routes.admin_router import perform_emergency_reset
     return await perform_emergency_reset()
 
 @app.post("/test_background_task")
 async def test_background_task_legacy(background_tasks: BackgroundTasks):
     """Legacy test background task endpoint - redirects to admin router"""
-    from admin_router import test_background_task_endpoint
+    from api.v1.routes.admin_router import test_background_task_endpoint
     return await test_background_task_endpoint(background_tasks)
 
 @app.get("/features")
 async def features_legacy():
     """Legacy features endpoint - redirects to admin router"""
-    from admin_router import get_available_features
+    from api.v1.routes.admin_router import get_available_features
     return await get_available_features()
 
 @app.get("/config")
 async def config_legacy():
     """Legacy config endpoint - redirects to admin router"""
-    from admin_router import get_system_config
+    from api.v1.routes.admin_router import get_system_config
     return await get_system_config()
 
 # API compatibility endpoints
 @app.get("/api/health")
 async def api_health_legacy():
     """Legacy API health endpoint - redirects to admin router"""
-    from admin_router import api_health
+    from api.v1.routes.admin_router import api_health
     return await api_health()
 
 @app.get("/api/status")
 async def api_status_legacy():
     """Legacy API status endpoint - redirects to admin router"""
-    from admin_router import api_status
+    from api.v1.routes.admin_router import api_status
     return await api_status()
 
 # ==========================================
@@ -332,7 +332,7 @@ if __name__ == "__main__":
         print(f"🎯 All {17} original endpoints preserved for backward compatibility")
         
         uvicorn.run(
-            "main_modular:app",
+            "main:app",
             host="0.0.0.0", 
             port=port,
             reload=False,

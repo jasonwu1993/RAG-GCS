@@ -5,12 +5,12 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 import time
 
-from core import log_debug, track_function_entry, bucket, index_endpoint
-from ai_service import embed_text, ai_service
-from config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD, SEARCH_CONFIG, ENHANCED_INSURANCE_CONFIG
-from cache_service import cache_service
-from enhanced_search_service import faceted_search_engine, autocomplete_service
-from performance_monitor import performance_monitor
+from shared.utils.core_utils import log_debug, track_function_entry, bucket, index_endpoint
+from core.ai.intelligence.ai_service import embed_text, ai_service
+from shared.config.base_config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD, SEARCH_CONFIG, ENHANCED_INSURANCE_CONFIG
+from core.data.storage.cache_service import cache_service
+from core.search.engines.enhanced_search import faceted_search_engine, autocomplete_service
+from core.analytics.monitoring.performance_monitor import performance_monitor
 
 router = APIRouter(prefix="/search", tags=["search"])
 

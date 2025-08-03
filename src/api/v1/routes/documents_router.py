@@ -9,10 +9,10 @@ import asyncio
 import pdfplumber
 import io
 
-from core import log_debug, track_function_entry, global_state, bucket, index_endpoint
-from google_drive import ultra_sync
-from ai_service import split_text, embed_text
-from config import DEPLOYED_INDEX_ID, TOP_K
+from shared.utils.core_utils import log_debug, track_function_entry, global_state, bucket, index_endpoint
+from core.data.sync.google_drive_sync import ultra_sync
+from core.ai.intelligence.ai_service import split_text, embed_text
+from shared.config.base_config import DEPLOYED_INDEX_ID, TOP_K
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 

@@ -8,8 +8,8 @@ import threading
 import sys
 import os
 
-from core import log_debug, track_function_entry, global_state, health_check, emergency_reset, get_current_metrics, toggle_debug_mode
-from config import *
+from shared.utils.core_utils import log_debug, track_function_entry, global_state, health_check, emergency_reset, get_current_metrics, toggle_debug_mode
+from shared.config.base_config import *
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 

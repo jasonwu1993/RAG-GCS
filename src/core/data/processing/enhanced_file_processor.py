@@ -22,7 +22,7 @@ import openpyxl
 import csv
 
 from core import log_debug, track_function_entry, bucket, index_endpoint, global_state
-from ai_service import split_text, embed_text
+from core.ai.intelligence.ai_service import split_text, embed_text
 from config import DEPLOYED_INDEX_ID
 from cache_service import cache_service
 

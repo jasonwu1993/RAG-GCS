@@ -3,7 +3,7 @@
 
 import time
 import asyncio
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Tuple
 from datetime import datetime, timedelta
 from collections import defaultdict, deque
 import statistics
