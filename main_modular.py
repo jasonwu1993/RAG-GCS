@@ -36,7 +36,11 @@ except Exception as e:
     def log_debug(msg, data=None): print(f"[DEBUG] {msg}")
     def track_function_entry(name): pass
     class MockState: 
-        def __init__(self): self.startup_time = datetime.utcnow()
+        def __init__(self): 
+            self.startup_time = datetime.utcnow()
+            self.request_count = 0
+        def track_request(self, success=True): 
+            self.request_count += 1
     global_state = MockState()
 
 try:
