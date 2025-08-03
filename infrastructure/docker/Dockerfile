@@ -19,17 +19,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy core application files for modular architecture
-COPY core.py config.py ai_service.py google_drive.py ./
-COPY search_router.py documents_router.py chat_router.py admin_router.py ./
-COPY main_modular.py ./
-COPY Clair-sys-prompt.txt ./
-
-# Create symlink for backward compatibility
-RUN ln -sf main_modular.py main.py
+# Copy enterprise application structure
+COPY src/ ./src/
+COPY run_server.py ./
 
 # Set environment variables for Cloud Run
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/src:/app
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -46,5 +41,5 @@ HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=2 \
     CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
 # Use exec form for better signal handling in Cloud Run  
-# Run the enhanced modular application
-CMD ["python", "main_modular.py"]
+# Run the enterprise application via run_server.py
+CMD ["python", "run_server.py"]
