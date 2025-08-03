@@ -34,10 +34,44 @@ class GlobalState:
         self.api_calls = 0
         self.files_found = 0
         self._lock = threading.Lock()
+        
+        # Circuit breaker for request overload protection
+        self.circuit_breaker = {
+            "is_open": False,
+            "failure_count": 0,
+            "last_failure_time": None,
+            "success_count": 0,
+            "total_requests": 0,
+            "success_rate": 1.0
+        }
     
-    def track_request(self):
+    def track_request(self, success: bool = True):
         with self._lock:
             self.request_count += 1
+            self.circuit_breaker["total_requests"] += 1
+            
+            if success:
+                self.circuit_breaker["success_count"] += 1
+                self.circuit_breaker["failure_count"] = max(0, self.circuit_breaker["failure_count"] - 1)
+            else:
+                self.circuit_breaker["failure_count"] += 1
+                self.circuit_breaker["last_failure_time"] = datetime.utcnow()
+            
+            # Update success rate
+            total = self.circuit_breaker["total_requests"]
+            if total > 0:
+                self.circuit_breaker["success_rate"] = self.circuit_breaker["success_count"] / total
+            
+            # Open circuit breaker if success rate drops below 50% with significant sample size
+            if (total >= 10 and 
+                self.circuit_breaker["success_rate"] < 0.5 and 
+                self.circuit_breaker["failure_count"] >= 5):
+                self.circuit_breaker["is_open"] = True
+                log_debug("Circuit breaker opened due to low success rate", {
+                    "success_rate": self.circuit_breaker["success_rate"],
+                    "total_requests": total,
+                    "failure_count": self.circuit_breaker["failure_count"]
+                })
     
     def track_function_call(self, function_name: str):
         with self._lock:
@@ -53,6 +87,33 @@ class GlobalState:
         with self._lock:
             self.files_found = count
     
+    def check_circuit_breaker(self) -> bool:
+        """Check if circuit breaker allows requests"""
+        with self._lock:
+            if not self.circuit_breaker["is_open"]:
+                return True
+            
+            # Auto-reset circuit breaker after 60 seconds if failure count decreases
+            if self.circuit_breaker["last_failure_time"]:
+                time_since_failure = datetime.utcnow() - self.circuit_breaker["last_failure_time"]
+                if time_since_failure.total_seconds() > 60:
+                    self.circuit_breaker["is_open"] = False
+                    self.circuit_breaker["failure_count"] = 0
+                    log_debug("Circuit breaker auto-reset after timeout")
+                    return True
+            
+            return False
+    
+    def reset_circuit_breaker(self):
+        """Manually reset circuit breaker"""
+        with self._lock:
+            self.circuit_breaker["is_open"] = False
+            self.circuit_breaker["failure_count"] = 0
+            self.circuit_breaker["success_count"] = 0
+            self.circuit_breaker["total_requests"] = 0
+            self.circuit_breaker["success_rate"] = 1.0
+            log_debug("Circuit breaker manually reset")
+    
     def get_status(self) -> Dict[str, Any]:
         with self._lock:
             uptime = datetime.utcnow() - self.startup_time
@@ -63,7 +124,8 @@ class GlobalState:
                 "sync_state": self.sync_state.copy(),
                 "debug_mode": self.debug_mode,
                 "api_calls": self.api_calls,
-                "files_found": self.files_found
+                "files_found": self.files_found,
+                "circuit_breaker": self.circuit_breaker.copy()
             }
 
 # Global state instance

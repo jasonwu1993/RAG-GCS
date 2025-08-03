@@ -225,6 +225,12 @@ async def sync_drive_force_legacy(background_tasks: BackgroundTasks):
     from documents_router import sync_google_drive
     return await sync_google_drive(background_tasks)
 
+@app.post("/cleanup_vertex_ai")
+async def cleanup_vertex_ai_legacy():
+    """Legacy endpoint - redirects to documents router"""
+    from documents_router import cleanup_vertex_ai_ghosts
+    return await cleanup_vertex_ai_ghosts()
+
 # Chat/AI endpoints (redirect to chat router)
 @app.post("/ask")
 async def ask_legacy(request: Request):

@@ -480,6 +480,107 @@ async def list_indexed_documents():
             "error": str(e)
         }
 
+@router.post("/cleanup_vertex_ai")
+async def cleanup_vertex_ai_ghosts():
+    """Clean up ghost/duplicate documents from Vertex AI index"""
+    track_function_entry("cleanup_vertex_ai_ghosts")
+    
+    try:
+        from core import bucket, index_endpoint
+        
+        if not bucket:
+            raise HTTPException(status_code=503, detail="Storage service not available")
+        
+        if not index_endpoint:
+            raise HTTPException(status_code=503, detail="Vertex AI service not available")
+        
+        log_debug("Starting Vertex AI cleanup", {"operation": "remove_ghost_documents"})
+        
+        # Define the actual valid root-level files (from the filtering logic)
+        valid_root_files = [
+            'AI Strategies Highlights Flyer.pdf',
+            'PATNAM DYNAMIC LOW VOLATILITY STRATEGIES POWERFUL COMBINATION LIM_1664_324_FINAL.pdf'
+        ]
+        
+        # Files to remove (ghosts that shouldn't be in root)
+        ghost_files = [
+            'EXTERNAL TERM CONVERSION PROGRAM.pdf',
+            'KEY FINANCIAL UNDERWRITING GUIDELINES.pdf', 
+            'LIFE INSURANCE APPLICATIONS INFORMAL VS FORMAL LIM_1812_525_FINAL.pdf',
+            'NLG FLEXLIFE PRODUCT GUIDE.pdf',
+            'NLG FLEXLIFE QUICK REFERENCE GUIDE.pdf',
+            'SUMMITLIFE QUICK REFERENCE GUIDE.pdf',
+            'Symetra Knowledge Base.md'
+        ]
+        
+        cleanup_results = {
+            "removed_chunks": [],
+            "removed_datapoints": [],
+            "errors": [],
+            "total_removed": 0
+        }
+        
+        # Remove chunks and datapoints for ghost files
+        for ghost_file in ghost_files:
+            try:
+                # Remove chunks from GCS
+                chunk_prefix = f"chunks/documents/{ghost_file}/"
+                chunk_blobs = list(bucket.list_blobs(prefix=chunk_prefix))
+                
+                chunk_ids_to_remove = []
+                for blob in chunk_blobs:
+                    chunk_ids_to_remove.append(blob.name)
+                    blob.delete()
+                    log_debug(f"Deleted chunk: {blob.name}")
+                
+                # Remove datapoints from Vertex AI index
+                if chunk_ids_to_remove:
+                    try:
+                        # Remove datapoints from vector index
+                        index_endpoint.remove_datapoints(
+                            deployed_index_id=DEPLOYED_INDEX_ID,
+                            datapoint_ids=chunk_ids_to_remove
+                        )
+                        cleanup_results["removed_datapoints"].extend(chunk_ids_to_remove)
+                        log_debug(f"Removed {len(chunk_ids_to_remove)} datapoints for {ghost_file}")
+                    except Exception as e:
+                        log_debug(f"Error removing datapoints for {ghost_file}", {"error": str(e)})
+                        cleanup_results["errors"].append(f"Datapoint removal failed for {ghost_file}: {str(e)}")
+                
+                cleanup_results["removed_chunks"].extend(chunk_ids_to_remove)
+                
+                # Also remove the original file from GCS if it exists
+                try:
+                    original_blob = bucket.blob(f"documents/{ghost_file}")
+                    if original_blob.exists():
+                        original_blob.delete()
+                        log_debug(f"Deleted original file: documents/{ghost_file}")
+                except Exception as e:
+                    log_debug(f"Error removing original file {ghost_file}", {"error": str(e)})
+                
+            except Exception as e:
+                error_msg = f"Error cleaning up {ghost_file}: {str(e)}"
+                log_debug(error_msg)
+                cleanup_results["errors"].append(error_msg)
+        
+        cleanup_results["total_removed"] = len(cleanup_results["removed_chunks"])
+        
+        log_debug("Vertex AI cleanup completed", {
+            "removed_chunks": len(cleanup_results["removed_chunks"]),
+            "removed_datapoints": len(cleanup_results["removed_datapoints"]),
+            "errors": len(cleanup_results["errors"])
+        })
+        
+        return {
+            "status": "success",
+            "message": f"Cleaned up {cleanup_results['total_removed']} ghost documents from Vertex AI",
+            "details": cleanup_results
+        }
+        
+    except Exception as e:
+        log_debug("ERROR in Vertex AI cleanup", {"error": str(e)})
+        raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
+
 # Auto-sync functionality
 async def auto_sync_loop():
     """Automatic sync every 2 hours"""
