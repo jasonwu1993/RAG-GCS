@@ -9,7 +9,22 @@ import asyncio
 import pdfplumber
 import io
 
-from core import log_debug, track_function_entry, global_state, bucket, index_endpoint
+# Safe imports from core with fallbacks
+try:
+    from core import log_debug, track_function_entry, global_state, bucket, index_endpoint
+    core_available = True
+except ImportError as e:
+    print(f"⚠️ Core import failed in documents_router: {e}")
+    core_available = False
+    # Fallback functions
+    def log_debug(msg, data=None): print(f"[DEBUG] {msg}")
+    def track_function_entry(name): pass
+    class MockState:
+        def __init__(self):
+            self.sync_state = {"is_syncing": False, "last_sync": None}
+    global_state = MockState()
+    bucket = None
+    index_endpoint = None
 from google_drive import ultra_sync
 from ai_service import split_text, embed_text
 from config import DEPLOYED_INDEX_ID, TOP_K

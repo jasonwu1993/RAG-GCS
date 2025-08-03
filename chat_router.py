@@ -5,7 +5,17 @@ from fastapi import APIRouter, Request, HTTPException
 from typing import Dict, List, Any
 from datetime import datetime
 
-from core import log_debug, track_function_entry, bucket, index_endpoint
+# Safe imports from core with fallbacks
+try:
+    from core import log_debug, track_function_entry, bucket, index_endpoint
+    core_available = True
+except ImportError as e:
+    print(f"⚠️ Core import failed in chat_router: {e}")
+    core_available = False
+    def log_debug(msg, data=None): print(f"[DEBUG] {msg}")
+    def track_function_entry(name): pass
+    bucket = None
+    index_endpoint = None
 from ai_service import ai_service, embed_text
 from config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD, CLAIR_GREETING
 
