@@ -39,8 +39,16 @@ except Exception as e:
         def __init__(self): 
             self.startup_time = datetime.utcnow()
             self.request_count = 0
+            self.debug_mode = False
+            self.sync_state = {"is_syncing": False, "last_sync": None}
+            self.function_calls = {}
+            self.performance_metrics = {}
+            self.api_calls = 0
+            self.files_found = 0
         def track_request(self, success=True): 
             self.request_count += 1
+        def track_function_call(self, name):
+            self.function_calls[name] = self.function_calls.get(name, 0) + 1
     global_state = MockState()
 
 try:
