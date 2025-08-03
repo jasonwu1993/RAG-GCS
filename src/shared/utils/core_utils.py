@@ -12,7 +12,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from openai import OpenAI
 from dotenv import load_dotenv
-from config import *
+from shared.config.base_config import *
 
 # Load environment variables
 load_dotenv()

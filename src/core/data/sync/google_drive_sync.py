@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime, timedelta
 from googleapiclient.http import MediaIoBaseDownload
 from core import log_debug, track_function_entry, drive_service, bucket, storage_client, global_state
-from config import BUCKET_NAME
+from shared.config.base_config import BUCKET_NAME
 
 class CircuitBreaker:
     """Circuit breaker pattern for resilient API calls"""

@@ -10,9 +10,9 @@ import numpy as np
 from dataclasses import dataclass
 
 from core import log_debug, track_function_entry, bucket, index_endpoint
-from cache_service import cache_service
+from core.data.storage.cache_service import cache_service
 from core.ai.intelligence.ai_service import embed_text, ai_service
-from config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD, ENHANCED_INSURANCE_CONFIG
+from shared.config.base_config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD, ENHANCED_INSURANCE_CONFIG
 
 @dataclass
 class SearchMetrics:
