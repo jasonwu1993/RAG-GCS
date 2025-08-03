@@ -21,8 +21,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy modular application files
 COPY . ./
-# Remove unnecessary files
-RUN rm -rf rag-frontend-vercel/ src/ tests/ *.md || true
+# Remove unnecessary files (keep src/ for graceful startup)
+RUN rm -rf rag-frontend-vercel/ tests/ *.md || true
 
 # Set environment variables for Cloud Run
 ENV PYTHONPATH=/app
@@ -42,5 +42,5 @@ HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=2 \
     CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
 # Use exec form for better signal handling in Cloud Run  
-# Run the graceful application that handles service failures
+# Run the standard modular application (graceful version has import issues)
 CMD ["python", "-m", "uvicorn", "main_modular:app", "--host", "0.0.0.0", "--port", "8080"]

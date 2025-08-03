@@ -1,4 +1,4 @@
-# Enhanced RAG Clair System Configuration
+# Enhanced RAG Clair System Configuration - Updated 2025-08-03
 # SOTA Life Insurance Domain Configuration
 
 import os
@@ -281,7 +281,7 @@ Guidelines:
 You aim to be a knowledgeable, friendly, and versatile AI assistant."""
 
 # Greeting message for Clair
-CLAIR_GREETING = "Hello! I'm Clair, your AI assistant. I can help with a wide range of topics including financial planning, document analysis, general questions, and more. How may I assist you today?"
+CLAIR_GREETING = os.getenv("CLAIR_GREETING", "Hello! I'm Clair, your AI assistant. I can help with a wide range of topics including financial planning, document analysis, general questions, and more. How may I assist you today?")
 
 # System prompts for different query types (all use Clair's core prompt as base)
 SYSTEM_PROMPTS = {
