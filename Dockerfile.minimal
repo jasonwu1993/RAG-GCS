@@ -1,4 +1,4 @@
-# Use Python 3.11 slim image for smaller size and faster builds
+# Minimal Dockerfile for Cloud Run deployment testing
 FROM python:3.11-slim
 
 # Set working directory
@@ -12,19 +12,15 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Copy requirements first for better Docker layer caching  
+# Copy requirements and install dependencies
 COPY requirements.txt .
-
-# Install Python dependencies with optimizations for Cloud Run
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy enterprise application structure
-COPY src/ ./src/
-COPY run_server_graceful.py ./
+# Copy minimal application
+COPY minimal_main.py .
 
-# Set environment variables for Cloud Run
-ENV PYTHONPATH=/app/src:/app
+# Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -33,13 +29,12 @@ RUN useradd --create-home --shell /bin/bash app && \
     chown -R app:app /app
 USER app
 
-# Expose the port that Cloud Run expects
+# Expose port
 EXPOSE 8080
 
-# Health check optimized for Cloud Run
+# Health check
 HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=2 \
     CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
-# Use exec form for better signal handling in Cloud Run  
-# Run the graceful application that handles service failures
-CMD ["python", "run_server_graceful.py"]
+# Run minimal application
+CMD ["python", "minimal_main.py"]
