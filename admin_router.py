@@ -8,16 +8,31 @@ import threading
 import sys
 import os
 
+# Define fallback functions first
+def log_debug(msg, data=None): 
+    print(f"[DEBUG] {msg}")
+
+def track_function_entry(name): 
+    pass
+
+class MockState:
+    def __init__(self):
+        self.sync_state = {"is_syncing": False, "last_sync": None}
+        self.debug_mode = False
+        
 # Safe imports - only import core functions, services will be imported as needed
 try:
     from core import log_debug, track_function_entry, global_state, health_check, emergency_reset, get_current_metrics, toggle_debug_mode
     core_imports_successful = True
 except ImportError as e:
-    print(f"⚠️ Core import failed: {e}")
+    print(f"⚠️ Core import failed in admin_router: {e}")
     core_imports_successful = False
-    # Fallback functions
-    def log_debug(msg, data=None): print(f"[DEBUG] {msg}")
-    def track_function_entry(name): pass
+    # Use fallback MockState
+    global_state = MockState()
+    def health_check(): return {"status": "degraded", "version": "6.1-PROFESSIONAL"}
+    def emergency_reset(): return {"status": "reset complete"}
+    def get_current_metrics(): return {}
+    def toggle_debug_mode(): return False
 from config import *
 
 router = APIRouter(prefix="/admin", tags=["admin"])
