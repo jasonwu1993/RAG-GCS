@@ -9,7 +9,7 @@ from datetime import datetime
 import tiktoken
 from openai import OpenAI
 from config import (ENHANCED_INSURANCE_CONFIG, SYSTEM_PROMPTS, GPT_MODEL, MAX_TOKENS, TEMPERATURE, EMBED_MODEL,
-                   CLAIR_SYSTEM_PROMPT, CONVERSATION_MEMORY_ENABLED, INTERNET_ACCESS_ENABLED, MAX_CONVERSATION_HISTORY)
+                   CLAIR_SYSTEM_PROMPT_ACTIVE, CONVERSATION_MEMORY_ENABLED, INTERNET_ACCESS_ENABLED, MAX_CONVERSATION_HISTORY)
 from core import log_debug, track_function_entry, openai_client
 
 class ConversationManager:
@@ -398,9 +398,9 @@ class IntelligentAIService:
         
         enhanced_context = "\n\n".join(enhanced_context_parts)
         
-        # 4. Build messages for GPT-level conversation
+        # 4. Build messages for GPT-level conversation with file-based system prompt
         messages = [
-            {"role": "system", "content": CLAIR_SYSTEM_PROMPT}
+            {"role": "system", "content": CLAIR_SYSTEM_PROMPT_ACTIVE}
         ]
         
         # Add conversation history

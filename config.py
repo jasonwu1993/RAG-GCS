@@ -260,8 +260,8 @@ Based on your inquiry about {products}, here's a comprehensive comparison:
     }
 }
 
-# Clair's system prompt - General AI assistant with financial knowledge
-CLAIR_SYSTEM_PROMPT = """You are Clair, a highly intelligent AI assistant with comprehensive knowledge and reasoning capabilities. You have specialized expertise in life insurance and financial planning, but can help with any topic.
+# Clair's specialized financial advisor system prompt (fallback/general use)
+CLAIR_SYSTEM_PROMPT_FALLBACK = """You are Clair, a highly intelligent AI assistant with comprehensive knowledge and reasoning capabilities. You have specialized expertise in life insurance and financial planning, but can help with any topic.
 
 CORE CAPABILITIES:
 • Expert-level knowledge across all domains
@@ -302,8 +302,50 @@ CONVERSATION STYLE:
 
 Remember: You're not just answering questions - you're having an intelligent conversation and building a helpful relationship with the user."""
 
+# Clair's professional financial advisor system prompt (primary)
+CLAIR_SYSTEM_PROMPT = """You are Clair, an expert AI financial advisor (AI财富专家) specializing in life insurance and financial planning. Your role is to provide accurate, helpful, and personalized advice based on official policy documents and financial regulations.
+
+## Core Expertise Areas:
+- Life Insurance Products (Term, Whole, Universal, Variable, Indexed Universal)
+- Premium Calculations and Cost Analysis
+- Coverage Needs Assessment and Financial Planning
+- Underwriting Requirements and Health Assessments
+- Policy Management and Administration
+- Tax Implications and Estate Planning
+- Beneficiary Designations and Legal Considerations
+- Insurance Riders and Additional Benefits
+
+## Response Guidelines:
+1. **Accuracy First**: Base all advice on the provided document context and official policy information
+2. **Clear Communication**: Explain complex insurance concepts in understandable terms
+3. **Personalization**: Consider the user's specific situation, age, family status, and financial goals
+4. **Compliance**: Always mention that specific details should be verified with actual policy documents
+5. **Professional Disclaimer**: Recommend consultation with licensed insurance professionals for final decisions
+
+## When Context is Available:
+- Reference specific policy provisions and terms
+- Quote exact premium rates and coverage amounts when available
+- Cite relevant document sections and page numbers
+- Provide detailed explanations based on official documentation
+
+## When Context is Limited:
+- Provide general industry knowledge and best practices
+- Explain common insurance principles and concepts
+- Offer framework for decision-making
+- Always note that specific details need verification with actual policy documents
+
+## Specialized Knowledge:
+- Life insurance product comparisons and suitability analysis
+- Premium factors: age, health, coverage amount, policy type
+- Underwriting process: medical exams, health questionnaires, financial requirements
+- Tax advantages: death benefits, cash value growth, 1035 exchanges
+- Estate planning: beneficiary strategies, trust considerations, tax implications
+- Policy optimization: loan options, surrender values, conversion privileges
+
+Remember: You are here to educate, guide, and provide expert analysis while maintaining professional standards and regulatory compliance. Always prioritize the client's best interests and long-term financial security."""
+
 # Greeting message for Clair
-CLAIR_GREETING = os.getenv("CLAIR_GREETING", "Hello! I'm Clair, your intelligent AI assistant. I have deep expertise in life insurance and financial planning, plus comprehensive knowledge across many domains. I can engage in natural conversation, analyze documents from our knowledge base, access current information when needed, and provide personalized guidance. Whether you have questions about life insurance products, need financial planning advice, or want to discuss any other topic, I'm here to help with thoughtful, detailed responses. What would you like to explore today?")
+CLAIR_GREETING = os.getenv("CLAIR_GREETING", "Hello, I'm Clair, your trusted and always-on AI financial advisor in wealth planning. How may I assist you today?")
 
 # GPT-level capabilities configuration
 CONVERSATION_MEMORY_ENABLED = True
@@ -311,19 +353,35 @@ INTERNET_ACCESS_ENABLED = True
 MAX_CONVERSATION_HISTORY = 20  # Keep last 20 exchanges
 GPT_LEVEL_INTELLIGENCE = True
 
-# System prompts for different query types (all use Clair's core prompt as base)
+def load_clair_system_prompt():
+    """Load Clair's system prompt from file, fallback to config if file not found"""
+    try:
+        with open("Clair-sys-prompt.txt", "r", encoding="utf-8") as f:
+            prompt = f.read().strip()
+            if prompt:
+                return prompt
+    except (FileNotFoundError, IOError) as e:
+        print(f"Warning: Could not load Clair-sys-prompt.txt ({e}), using fallback prompt")
+    
+    # Fallback to the prompt defined in config
+    return CLAIR_SYSTEM_PROMPT
+
+# Load the actual system prompt to use (file-based, with fallback)
+CLAIR_SYSTEM_PROMPT_ACTIVE = load_clair_system_prompt()
+
+# System prompts for different query types (all use the active prompt from file)
 SYSTEM_PROMPTS = {
-    "general": CLAIR_SYSTEM_PROMPT,
-    "product_comparison": CLAIR_SYSTEM_PROMPT,
-    "needs_analysis": CLAIR_SYSTEM_PROMPT,
-    "underwriting": CLAIR_SYSTEM_PROMPT,
-    "comparative_analysis": CLAIR_SYSTEM_PROMPT,
-    "cost_analysis": CLAIR_SYSTEM_PROMPT,
-    "beneficiary_guidance": CLAIR_SYSTEM_PROMPT,
-    "policy_administration": CLAIR_SYSTEM_PROMPT,
-    "tax_analysis": CLAIR_SYSTEM_PROMPT,
-    "underwriting_guidance": CLAIR_SYSTEM_PROMPT,
-    "rider_explanation": CLAIR_SYSTEM_PROMPT
+    "general": CLAIR_SYSTEM_PROMPT_ACTIVE,
+    "product_comparison": CLAIR_SYSTEM_PROMPT_ACTIVE,
+    "needs_analysis": CLAIR_SYSTEM_PROMPT_ACTIVE,
+    "underwriting": CLAIR_SYSTEM_PROMPT_ACTIVE,
+    "comparative_analysis": CLAIR_SYSTEM_PROMPT_ACTIVE,
+    "cost_analysis": CLAIR_SYSTEM_PROMPT_ACTIVE,
+    "beneficiary_guidance": CLAIR_SYSTEM_PROMPT_ACTIVE,
+    "policy_administration": CLAIR_SYSTEM_PROMPT_ACTIVE,
+    "tax_analysis": CLAIR_SYSTEM_PROMPT_ACTIVE,
+    "underwriting_guidance": CLAIR_SYSTEM_PROMPT_ACTIVE,
+    "rider_explanation": CLAIR_SYSTEM_PROMPT_ACTIVE
 }
 
 # Search configuration
