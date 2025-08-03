@@ -348,6 +348,7 @@ def health_check() -> Dict[str, Any]:
     
     health_status = {
         "status": "healthy",
+        "version": "6.1-PROFESSIONAL",  # Direct version for frontend compatibility
         "timestamp": datetime.utcnow().isoformat(),
         "services": get_service_status(),
         "global_state": global_state.get_status()

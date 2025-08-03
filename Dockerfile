@@ -25,6 +25,10 @@ COPY . ./
 RUN rm -rf rag-frontend-vercel/ tests/ *.md src/ run_server_graceful.py || true
 # Ensure we have the system prompt file
 RUN ls -la Clair-sys-prompt.txt || echo "Warning: Clair-sys-prompt.txt not found"
+# Debug: Show what main files exist
+RUN echo "=== MAIN FILES AFTER CLEANUP ===" && ls -la main*.py
+# Debug: Check for any graceful references
+RUN grep -r "GRACEFUL" . || echo "No GRACEFUL references found"
 
 # Set environment variables for Cloud Run
 ENV PYTHONPATH=/app
@@ -43,5 +47,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=2 \
     CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
-# Run diagnostic first, then the application
-CMD ["sh", "-c", "python diagnostic.py && python -m uvicorn main_modular:app --host 0.0.0.0 --port 8080"]
+# Run enhanced modular version with GPT-level intelligence and sync persistence
+CMD ["python", "-m", "uvicorn", "main_modular:app", "--host", "0.0.0.0", "--port", "8080"]

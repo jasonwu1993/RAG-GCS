@@ -69,8 +69,20 @@ simple_*.py
 *_manager.py
 Rag-Backend-Test.py
 
+# Force Dockerfile usage - ignore all old main files to prevent Buildpacks
+main_legacy.py
+main_enhanced.py
+main_Original.py
+main_simple.py
+main-Render.py
+minimal_main.py
+run_server_graceful.py
+
 # Frontend (separate deployment)
 rag-frontend-vercel/
+
+# Archive directory with old files
+archive_old_versions/
 
 # Frontend files in root (prevent buildpack confusion)
 package.json

@@ -350,7 +350,7 @@ CLAIR_GREETING = os.getenv("CLAIR_GREETING", "Hello, I'm Clair, your trusted and
 # GPT-level capabilities configuration
 CONVERSATION_MEMORY_ENABLED = True
 INTERNET_ACCESS_ENABLED = True
-MAX_CONVERSATION_HISTORY = 20  # Keep last 20 exchanges
+MAX_CONVERSATION_HISTORY = 200  # Keep last 200 exchanges (100 user + 100 assistant messages)
 GPT_LEVEL_INTELLIGENCE = True
 
 def load_clair_system_prompt():

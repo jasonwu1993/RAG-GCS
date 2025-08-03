@@ -64,12 +64,13 @@ except Exception as e:
     print(f"❌ Config import failed: {e}")
 
 # System identification  
-VERSION = "6.0-MODULAR-PROFESSIONAL-ADVISOR"
+VERSION = "6.1-PROFESSIONAL"
 BUILD_DATE = "2025-08-03"
 
 print(f"🚀 Starting Enhanced RAG Clair System {VERSION} - Built {BUILD_DATE}")
 print("🏗️ Modular SOTA Architecture with Professional Financial Advisor")
 print("🎯 Using Clair-sys-prompt.txt for professional financial advisor persona")
+print("📋 DOCKERFILE DEPLOYMENT - This should show main_modular.py is running!")
 print("📁 Working directory:", os.getcwd())
 print("📁 System prompt file exists:", os.path.exists("Clair-sys-prompt.txt"))
 
@@ -144,6 +145,22 @@ if admin_router:
     print("✅ Admin router included")
 else:
     print("⚠️ Admin router not available")
+
+# Frontend verification endpoint
+@app.get("/frontend-check")
+async def frontend_verification():
+    """Specific endpoint for frontend to verify deployment details"""
+    return {
+        "frontend_verification": True,
+        "deployment_id": f"{VERSION}-{BUILD_DATE}",
+        "version": VERSION,
+        "build_date": BUILD_DATE,
+        "architecture": "modular_sota",
+        "system_prompt_file_exists": os.path.exists("Clair-sys-prompt.txt"),
+        "greeting": CLAIR_GREETING,
+        "timestamp": datetime.utcnow().isoformat(),
+        "container_uptime": (datetime.utcnow() - global_state.startup_time).total_seconds()
+    }
 
 # Root endpoint - enhanced but backward compatible
 @app.get("/")

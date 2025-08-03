@@ -8,13 +8,13 @@ import threading
 import sys
 import os
 
-from core import log_debug, track_function_entry, global_state, health_check, emergency_reset, get_current_metrics, toggle_debug_mode
+from core import log_debug, track_function_entry, global_state, health_check, emergency_reset, get_current_metrics, toggle_debug_mode, bucket, drive_service, index_endpoint, openai_client
 from config import *
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-VERSION = "6.0-MODULAR-SOTA"
-BUILD_DATE = "2025-01-02"
+VERSION = "6.1-PROFESSIONAL"  
+BUILD_DATE = "2025-08-03"
 
 @router.get("/debug")
 async def get_debug_info():
