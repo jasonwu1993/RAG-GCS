@@ -7,9 +7,19 @@ from datetime import datetime
 
 from core import log_debug, track_function_entry, bucket, index_endpoint
 from ai_service import ai_service, embed_text
-from config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD
+from config import DEPLOYED_INDEX_ID, TOP_K, SIMILARITY_THRESHOLD, CLAIR_GREETING
 
 router = APIRouter(prefix="/chat", tags=["chat"])
+
+@router.get("/greeting")
+async def get_clair_greeting():
+    """Get Clair's greeting message"""
+    track_function_entry("get_clair_greeting")
+    
+    return {
+        "greeting": CLAIR_GREETING,
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 @router.post("/ask")
 async def enhanced_ask_question(request: Request):
