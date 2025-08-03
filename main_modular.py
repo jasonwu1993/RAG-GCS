@@ -73,6 +73,8 @@ print("🎯 Using Clair-sys-prompt.txt for professional financial advisor person
 print("📋 DOCKERFILE DEPLOYMENT - This should show main_modular.py is running!")
 print("📁 Working directory:", os.getcwd())
 print("📁 System prompt file exists:", os.path.exists("Clair-sys-prompt.txt"))
+print(f"🔍 DEBUG: VERSION variable contains: '{VERSION}'")
+print(f"🔍 DEBUG: BUILD_DATE variable contains: '{BUILD_DATE}'")
 
 # Debug: Show what config is loaded
 from config import CLAIR_GREETING, CLAIR_SYSTEM_PROMPT_ACTIVE
@@ -171,6 +173,9 @@ async def enhanced_root():
     try:
         from core import get_service_status
         service_status = get_service_status()
+        
+        # Debug: Print what VERSION contains at runtime
+        print(f"🔍 RUNTIME DEBUG: VERSION = '{VERSION}' (type: {type(VERSION)})")
         
         return {
             "message": "Enhanced RAG Clair System - SOTA Life Insurance AI",
