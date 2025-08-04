@@ -18,7 +18,7 @@ EMBED_MODEL = "text-embedding-3-small"
 SIMILARITY_THRESHOLD = 0.75
 TOP_K = 3
 GPT_MODEL = "gpt-4o"
-MAX_TOKENS = 1000
+MAX_TOKENS = 500  # Reduced for more concise responses
 TEMPERATURE = 0.3
 
 # Enhanced Life Insurance Domain Configuration

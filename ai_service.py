@@ -266,9 +266,9 @@ class AIResponseGenerator:
             
             # Prepare user prompt
             if enhanced_context.strip():
-                user_prompt = f"CONTEXT:\n---\n{enhanced_context}\n---\n\nQUESTION: {query}"
+                user_prompt = f"CONTEXT:\n---\n{enhanced_context}\n---\n\nQUESTION: {query}\n\nIMPORTANT: Please provide a brief, concise response that directly addresses the question."
             else:
-                user_prompt = f"QUESTION: {query}\n\nNote: No specific document context available. Please provide general guidance and mention that specific details should be verified with actual policy documents."
+                user_prompt = f"QUESTION: {query}\n\nNote: No specific document context available. Please provide general guidance and mention that specific details should be verified with actual policy documents.\n\nIMPORTANT: Please provide a brief, concise response that directly addresses the question."
             
             log_debug("Generating AI response", {
                 "intent": intent_data["intent"],
@@ -410,11 +410,15 @@ class IntelligentAIService:
         if enhanced_context.strip():
             user_message = f"""{enhanced_context}
 
-QUESTION: {query}"""
+QUESTION: {query}
+
+IMPORTANT: Please provide a brief, concise response that directly addresses the question. Focus on the most relevant information."""
         else:
             user_message = f"""QUESTION: {query}
 
-Note: No specific document context available from our knowledge base. Please use your general knowledge and provide a comprehensive, helpful response."""
+Note: No specific document context available from our knowledge base. Please use your general knowledge and provide a helpful response.
+
+IMPORTANT: Please provide a brief, concise response that directly addresses the question. Focus on the most relevant information."""
         
         messages.append({"role": "user", "content": user_message})
         
@@ -423,7 +427,7 @@ Note: No specific document context available from our knowledge base. Please use
             response = openai_client.chat.completions.create(
                 model=GPT_MODEL,
                 messages=messages,
-                max_tokens=MAX_TOKENS * 2,  # Allow longer responses for GPT-level quality
+                max_tokens=MAX_TOKENS,  # Use standard token limit for concise responses
                 temperature=TEMPERATURE,
                 stream=False
             )
