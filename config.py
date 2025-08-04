@@ -18,8 +18,16 @@ EMBED_MODEL = "text-embedding-3-small"
 SIMILARITY_THRESHOLD = 0.75
 TOP_K = 3
 GPT_MODEL = "gpt-4o"
-MAX_TOKENS = 500  # Reduced for more concise responses
-TEMPERATURE = 0.3
+MAX_TOKENS = 1000  # Optimized for faster responses while maintaining quality
+TEMPERATURE = 0.7  # Optimal for friendly yet professional tone
+TOP_P = 0.95  # Slightly focused for faster generation
+PRESENCE_PENALTY = 0.6  # Encourage varied responses, avoid repetition
+FREQUENCY_PENALTY = 0.0  # No frequency penalty for natural flow
+
+# Performance Optimization Settings
+REQUEST_TIMEOUT = 30  # Timeout for API requests
+PARALLEL_REQUESTS = True  # Enable parallel processing where possible
+CACHE_RESPONSES = True  # Cache frequent responses for faster delivery
 
 # Enhanced Life Insurance Domain Configuration
 ENHANCED_INSURANCE_CONFIG = {
@@ -359,11 +367,13 @@ def load_clair_system_prompt():
         with open("Clair-sys-prompt.txt", "r", encoding="utf-8") as f:
             prompt = f.read().strip()
             if prompt:
+                print(f"✅ Successfully loaded Clair system prompt from file ({len(prompt)} characters)")
                 return prompt
     except (FileNotFoundError, IOError) as e:
         print(f"Warning: Could not load Clair-sys-prompt.txt ({e}), using fallback prompt")
     
     # Fallback to the prompt defined in config
+    print(f"⚠️ Using fallback system prompt ({len(CLAIR_SYSTEM_PROMPT)} characters)")
     return CLAIR_SYSTEM_PROMPT
 
 # Load the actual system prompt to use (file-based, with fallback)

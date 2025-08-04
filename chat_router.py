@@ -127,21 +127,25 @@ async def enhanced_ask_question(request: Request):
         # Extract session ID for conversation awareness
         session_id = data.get("session_id", f"session_{int(datetime.utcnow().timestamp())}")
         
-        # Use GPT-level AI service for response generation
-        ai_result = await ai_service.process_query_with_gpt_intelligence(
+        # Use Ultra-intelligent AI service for response generation with multi-source routing
+        ai_result = await ai_service.process_query_with_ultra_intelligence(
             query=query, 
             context=context, 
             session_id=session_id,
+            vertex_search_func=lambda q: {"context": context, "highest_similarity_score": highest_score, "documents_found": len(relevant_chunks)},
             filters=filters
         )
         
-        # Enhanced GPT-level response format
+        # Ultra-intelligent response format with multi-source metadata
         response = {
             "answer": ai_result["answer"],
             "session_id": session_id,
             "context_used": bool(context.strip()),
             "conversation_aware": ai_result.get("conversation_aware", False),
-            "internet_enhanced": ai_result.get("internet_enhanced", False),
+            "ultra_intelligence_enabled": ai_result.get("ultra_intelligence_metadata", {}).get("multi_source_enabled", False),
+            "query_analysis": ai_result.get("ultra_intelligence_metadata", {}).get("query_analysis", {}),
+            "information_synthesis": ai_result.get("ultra_intelligence_metadata", {}).get("information_synthesis", {}),
+            "sources_consulted": ai_result.get("ultra_intelligence_metadata", {}).get("sources_used", []),
             "documents_found": len(relevant_chunks),
             "highest_similarity_score": highest_score,
             "filters_applied": filters,

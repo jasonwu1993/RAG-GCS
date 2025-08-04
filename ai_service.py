@@ -10,7 +10,7 @@ import tiktoken
 from openai import OpenAI
 from config import (ENHANCED_INSURANCE_CONFIG, SYSTEM_PROMPTS, GPT_MODEL, MAX_TOKENS, TEMPERATURE, EMBED_MODEL,
                    CLAIR_SYSTEM_PROMPT_ACTIVE, CONVERSATION_MEMORY_ENABLED, INTERNET_ACCESS_ENABLED, MAX_CONVERSATION_HISTORY,
-                   TOP_P, PRESENCE_PENALTY, FREQUENCY_PENALTY)
+                   TOP_P, PRESENCE_PENALTY, FREQUENCY_PENALTY, REQUEST_TIMEOUT)
 from core import log_debug, track_function_entry
 
 def get_openai_client():
@@ -54,6 +54,16 @@ try:
 except ImportError as e:
     print(f"⚠️ Hotkey handler not available: {e}")
     hotkey_handler_available = False
+
+# Import response cache
+try:
+    from response_cache import response_cache
+    from config import CACHE_RESPONSES
+    cache_available = True
+except ImportError as e:
+    print(f"⚠️ Response cache not available: {e}")
+    cache_available = False
+    CACHE_RESPONSES = False
 
 class ConversationManager:
     """Manages conversation context and memory for GPT-level intelligence"""
@@ -619,7 +629,8 @@ Note: Limited current information available. Please provide expert guidance base
                 top_p=TOP_P,
                 presence_penalty=PRESENCE_PENALTY,
                 frequency_penalty=FREQUENCY_PENALTY,
-                stream=False
+                stream=False,
+                timeout=REQUEST_TIMEOUT
             )
             
             answer = response.choices[0].message.content
@@ -732,6 +743,16 @@ Note: Limited current information available. Please provide expert guidance base
         
         start_time = datetime.utcnow()
         
+        # Check cache first if available and enabled
+        if cache_available and CACHE_RESPONSES:
+            cached_response = response_cache.get(query, session_id)
+            if cached_response:
+                # Update processing time to show cached response speed
+                cached_response["processing_time_seconds"] = (datetime.utcnow() - start_time).total_seconds()
+                cached_response["cached_response"] = True
+                log_debug("Returning cached response", {"query": query[:50]})
+                return cached_response
+        
         # 1. Get conversation history for natural flow
         conversation_history = []
         if CONVERSATION_MEMORY_ENABLED:
@@ -775,7 +796,8 @@ Note: No specific policy documents are available for this query. Please provide 
                 top_p=TOP_P,
                 presence_penalty=PRESENCE_PENALTY,
                 frequency_penalty=FREQUENCY_PENALTY,
-                stream=False
+                stream=False,
+                timeout=REQUEST_TIMEOUT
             )
             
             answer = response.choices[0].message.content
@@ -814,8 +836,13 @@ Note: No specific policy documents are available for this query. Please provide 
                     "completion_tokens": response.usage.completion_tokens,
                     "total_tokens": response.usage.total_tokens
                 },
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
+                "cached_response": False
             }
+            
+            # Cache the result for future performance optimization
+            if cache_available and CACHE_RESPONSES:
+                response_cache.put(query, result, session_id)
             
             log_debug("Natural conversation processed", {
                 "session_id": session_id,
