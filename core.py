@@ -17,6 +17,14 @@ from config import *
 # Load environment variables
 load_dotenv()
 
+# Temporary logging function to avoid circular dependencies during initialization
+def _temp_log_debug(message: str, data: Any = None):
+    """Temporary logging during initialization to avoid circular dependencies"""
+    timestamp = datetime.utcnow().isoformat()
+    print(f"[INIT DEBUG {timestamp}] {message}")
+    if data:
+        print(f"[INIT DATA] {json.dumps(data, indent=2, default=str)}")
+
 # Global state management
 class GlobalState:
     def __init__(self):
@@ -145,12 +153,12 @@ class GlobalState:
                     stored_state = json.loads(state_blob.download_as_text())
                     if "sync_state" in stored_state:
                         self.sync_state.update(stored_state["sync_state"])
-                        log_debug("Restored sync state from persistent storage", {
+                        _temp_log_debug("Restored sync state from persistent storage", {
                             "last_sync": self.sync_state.get("last_sync"),
                             "restored_keys": list(stored_state["sync_state"].keys())
                         })
         except Exception as e:
-            log_debug("Could not restore sync state, using defaults", {"error": str(e)})
+            _temp_log_debug("Could not restore sync state, using defaults", {"error": str(e)})
     
     def persist_sync_state(self):
         """Persist sync state to GCS immediately"""
@@ -164,12 +172,12 @@ class GlobalState:
                 }
                 state_blob = bucket.blob("system_state.json")
                 state_blob.upload_from_string(json.dumps(state_data, indent=2))
-                log_debug("Persisted sync state to GCS", {
+                _temp_log_debug("Persisted sync state to GCS", {
                     "last_sync": self.sync_state.get("last_sync"),
                     "is_syncing": self.sync_state.get("is_syncing")
                 })
         except Exception as e:
-            log_debug("Failed to persist sync state", {"error": str(e)})
+            _temp_log_debug("Failed to persist sync state", {"error": str(e)})
     
     def update_sync_completion(self, start_time: datetime, results: Dict):
         """Atomically update and persist sync completion"""
@@ -182,7 +190,7 @@ class GlobalState:
             })
             # Persist immediately after update
             self.persist_sync_state()
-            log_debug("Sync completion updated and persisted", {
+            _temp_log_debug("Sync completion updated and persisted", {
                 "last_sync": self.sync_state["last_sync"],
                 "files_updated": len(results.get("updated", [])) if results else 0
             })

@@ -9,8 +9,51 @@ from datetime import datetime
 import tiktoken
 from openai import OpenAI
 from config import (ENHANCED_INSURANCE_CONFIG, SYSTEM_PROMPTS, GPT_MODEL, MAX_TOKENS, TEMPERATURE, EMBED_MODEL,
-                   CLAIR_SYSTEM_PROMPT_ACTIVE, CONVERSATION_MEMORY_ENABLED, INTERNET_ACCESS_ENABLED, MAX_CONVERSATION_HISTORY)
-from core import log_debug, track_function_entry, openai_client
+                   CLAIR_SYSTEM_PROMPT_ACTIVE, CONVERSATION_MEMORY_ENABLED, INTERNET_ACCESS_ENABLED, MAX_CONVERSATION_HISTORY,
+                   TOP_P, PRESENCE_PENALTY, FREQUENCY_PENALTY)
+from core import log_debug, track_function_entry
+
+def get_openai_client():
+    """Get OpenAI client dynamically to avoid import-time dependency issues"""
+    try:
+        from core import openai_client
+        if openai_client is None:
+            # Try to initialize if not done yet
+            from core import initialize_openai_client
+            initialize_openai_client()
+            from core import openai_client
+        return openai_client
+    except Exception as e:
+        log_debug("Failed to get OpenAI client", {"error": str(e)})
+        return None
+
+# Import intelligent routing system
+try:
+    from intelligent_routing_system import (
+        QueryIntelligenceEngine, MultiSourceOrchestrator, InformationSynthesisEngine,
+        QueryAnalysis, SourceResult, InformationSource
+    )
+    from advanced_internet_search import advanced_internet_search
+    intelligent_routing_available = True
+except ImportError as e:
+    print(f"⚠️ Intelligent routing system not available: {e}")
+    intelligent_routing_available = False
+
+# Import Clair system prompt enforcer
+try:
+    from clair_prompt_enforcer import clair_prompt_enforcer
+    prompt_enforcer_available = True
+except ImportError as e:
+    print(f"⚠️ Clair prompt enforcer not available: {e}")
+    prompt_enforcer_available = False
+
+# Import hotkey handler
+try:
+    from hotkey_handler import hotkey_handler
+    hotkey_handler_available = True
+except ImportError as e:
+    print(f"⚠️ Hotkey handler not available: {e}")
+    hotkey_handler_available = False
 
 class ConversationManager:
     """Manages conversation context and memory for GPT-level intelligence"""
@@ -264,11 +307,11 @@ class AIResponseGenerator:
             # Enhance context with entities
             enhanced_context = self.enhance_context(context, entities, intent_data["intent"])
             
-            # Prepare user prompt
+            # Prepare user prompt - clean and natural
             if enhanced_context.strip():
-                user_prompt = f"CONTEXT:\n---\n{enhanced_context}\n---\n\nQUESTION: {query}\n\nIMPORTANT: Please provide a brief, concise response that directly addresses the question."
+                user_prompt = f"Based on our knowledge base:\n\n{enhanced_context}\n\n{query}"
             else:
-                user_prompt = f"QUESTION: {query}\n\nNote: No specific document context available. Please provide general guidance and mention that specific details should be verified with actual policy documents.\n\nIMPORTANT: Please provide a brief, concise response that directly addresses the question."
+                user_prompt = query
             
             log_debug("Generating AI response", {
                 "intent": intent_data["intent"],
@@ -277,15 +320,21 @@ class AIResponseGenerator:
                 "context_length": len(enhanced_context)
             })
             
-            # Call OpenAI
-            response = openai_client.chat.completions.create(
+            # Call OpenAI with optimal GPT-like parameters
+            client = get_openai_client()
+            if not client:
+                raise Exception("OpenAI client not available")
+            response = client.chat.completions.create(
                 model=GPT_MODEL,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
                 max_tokens=MAX_TOKENS,
-                temperature=TEMPERATURE
+                temperature=TEMPERATURE,
+                top_p=TOP_P,
+                presence_penalty=PRESENCE_PENALTY,
+                frequency_penalty=FREQUENCY_PENALTY
             )
             
             answer = response.choices[0].message.content
@@ -316,6 +365,52 @@ class AIResponseGenerator:
                 "error": str(e)
             }
 
+class ResponseValidator:
+    """Validates Clair's responses for compliance with system prompt guidelines"""
+    
+    def __init__(self):
+        self.required_disclaimer_phrases = [
+            "verify with actual policy documents",
+            "consult with a licensed",
+            "professional consultation",
+            "specific details should be verified",
+            "licensed insurance professional"
+        ]
+        
+        self.personalization_triggers = [
+            "insurance", "policy", "coverage", "premium", "recommend", "suggest", "best"
+        ]
+    
+    def validate_response_compliance(self, query: str, response: str) -> Dict[str, Any]:
+        """Validate response against system prompt requirements"""
+        validation_results = {
+            "compliance_score": 1.0,
+            "issues": [],
+            "recommendations": []
+        }
+        
+        query_lower = query.lower()
+        response_lower = response.lower()
+        
+        # Check if advice-giving response includes disclaimer
+        is_advice_response = any(trigger in query_lower for trigger in self.personalization_triggers)
+        
+        if is_advice_response:
+            has_disclaimer = any(phrase in response_lower for phrase in self.required_disclaimer_phrases)
+            if not has_disclaimer:
+                validation_results["compliance_score"] -= 0.3
+                validation_results["issues"].append("Missing professional consultation disclaimer")
+                validation_results["recommendations"].append("Add disclaimer about consulting licensed professionals")
+        
+        # Check for personalization questions
+        asks_questions = "?" in response or any(word in response_lower for word in ["what's your", "how old", "tell me about your"])
+        if is_advice_response and not asks_questions:
+            validation_results["compliance_score"] -= 0.2
+            validation_results["issues"].append("Missing personalization questions")
+            validation_results["recommendations"].append("Ask about client's specific situation (age, family, goals)")
+        
+        return validation_results
+
 class IntelligentAIService:
     """Main AI service with GPT-level intelligence and conversation awareness"""
     
@@ -324,6 +419,35 @@ class IntelligentAIService:
         self.generator = AIResponseGenerator()
         self.conversation_manager = ConversationManager()
         self.internet_service = InternetSearchService()
+        self.validator = ResponseValidator()
+        
+        # Initialize ultra-intelligent routing system
+        if intelligent_routing_available:
+            self.query_intelligence = QueryIntelligenceEngine()
+            self.multi_source_orchestrator = MultiSourceOrchestrator()
+            self.synthesis_engine = InformationSynthesisEngine()
+            self.ultra_intelligence_enabled = True
+        else:
+            self.ultra_intelligence_enabled = False
+        
+        # Initialize Clair system prompt enforcer
+        self.prompt_enforcer_enabled = prompt_enforcer_available
+        
+        # Initialize hotkey handler
+        self.hotkey_handler_enabled = hotkey_handler_available
+    
+    def _detect_english_simple(self, text: str) -> bool:
+        """Simple English detection for hotkey language preference"""
+        import re
+        # Check for Chinese characters
+        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', text))
+        total_chars = len(text.replace(" ", ""))
+        
+        if total_chars == 0:
+            return True  # Default to English if empty
+        
+        # If more than 20% Chinese characters, it's NOT English
+        return chinese_chars / total_chars <= 0.2
     
     def process_query(self, query: str, context: str = "", filters: List[str] = None) -> Dict[str, Any]:
         """Process a query with full AI intelligence"""
@@ -366,6 +490,236 @@ class IntelligentAIService:
         
         return result
     
+    async def process_query_with_ultra_intelligence(
+        self, 
+        query: str, 
+        context: str = "", 
+        session_id: str = "default",
+        vertex_search_func: callable = None,
+        filters: List[str] = None
+    ) -> Dict[str, Any]:
+        """Ultra-intelligent query processing with multi-source routing and synthesis"""
+        track_function_entry("process_query_with_ultra_intelligence")
+        
+        start_time = datetime.utcnow()
+        
+        # Check for hotkey input first (even if ultra-intelligence is disabled)
+        if self.hotkey_handler_enabled and hotkey_handler.is_hotkey(query):
+            # Determine language preference
+            conversation_history = []
+            if CONVERSATION_MEMORY_ENABLED:
+                conversation_history = self.conversation_manager.get_conversation_context(session_id)
+            
+            # Check if previous conversation was in Chinese
+            needs_chinese = True
+            for msg in conversation_history[-6:]:  # Check last 3 exchanges
+                if msg.get("role") == "user" and self._detect_english_simple(msg.get("content", "")):
+                    needs_chinese = False
+                    break
+            
+            hotkey_response = hotkey_handler.get_hotkey_response(query, needs_chinese)
+            
+            if hotkey_response:
+                # Save conversation for natural flow
+                if CONVERSATION_MEMORY_ENABLED:
+                    self.conversation_manager.add_exchange(session_id, query, hotkey_response)
+                
+                return {
+                    "answer": hotkey_response,
+                    "query": query,
+                    "session_id": session_id,
+                    "hotkey_processed": True,
+                    "conversation_aware": len(conversation_history) > 0,
+                    "processing_time_seconds": (datetime.utcnow() - start_time).total_seconds(),
+                    "clair_enforcement": {
+                        "enforcer_enabled": False,
+                        "enforcement_applied": False,
+                        "language_enforcement": needs_chinese,
+                        "hotkey_response": True
+                    },
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+        
+        if not self.ultra_intelligence_enabled:
+            # Fallback to standard GPT processing
+            return await self.process_query_with_gpt_intelligence(query, context, session_id, filters)
+        
+        try:
+            # 1. Ultra-intelligent query analysis
+            analysis = await self.query_intelligence.analyze_query(query, context)
+            
+            log_debug("Ultra-intelligent query analysis", {
+                "query_type": analysis.query_type.value,
+                "confidence": analysis.confidence,
+                "requires_current": analysis.requires_current_info,
+                "requires_specific": analysis.requires_specific_docs,
+                "sources": [s.value for s in analysis.priority_sources],
+                "strategy": analysis.search_strategy
+            })
+            
+            # 2. Execute multi-source search strategy
+            source_results = await self.multi_source_orchestrator.execute_search_strategy(
+                query=query,
+                analysis=analysis,
+                vertex_search_func=self._create_vertex_search_wrapper(context, vertex_search_func),
+                internet_search_func=self._create_internet_search_wrapper()
+            )
+            
+            # 3. Synthesize information from multiple sources
+            synthesis_result = self.synthesis_engine.synthesize_results(source_results, query, analysis)
+            
+            # 4. Get conversation history for context
+            conversation_history = []
+            if CONVERSATION_MEMORY_ENABLED:
+                conversation_history = self.conversation_manager.get_conversation_context(session_id)
+            
+            # 5. Build ultra-intelligent message context
+            messages = [
+                {"role": "system", "content": CLAIR_SYSTEM_PROMPT_ACTIVE}
+            ]
+            
+            log_debug("System prompt being sent to OpenAI", {
+                "prompt_length": len(CLAIR_SYSTEM_PROMPT_ACTIVE),
+                "prompt_preview": CLAIR_SYSTEM_PROMPT_ACTIVE[:200] + "..." if len(CLAIR_SYSTEM_PROMPT_ACTIVE) > 200 else CLAIR_SYSTEM_PROMPT_ACTIVE
+            })
+            
+            # Add conversation history
+            messages.extend(conversation_history)
+            
+            # 6. Create enhanced user message with synthesized information
+            if synthesis_result["synthesized_content"]:
+                user_message = f"""COMPREHENSIVE RESEARCH CONTEXT:
+{synthesis_result["synthesized_content"]}
+
+ANALYSIS METADATA:
+- Query Type: {analysis.query_type.value}
+- Information Sources: {', '.join([s.value for s in analysis.priority_sources])}
+- Synthesis Confidence: {synthesis_result["confidence_score"]:.2f}
+- Total Sources Consulted: {synthesis_result["synthesis_metadata"]["sources_used"]}
+
+CLIENT QUESTION: {query}
+
+Please provide expert advice based on this comprehensive research, following your role as Clair, the expert financial advisor."""
+            else:
+                user_message = f"""CLIENT QUESTION: {query}
+
+Note: Limited current information available. Please provide expert guidance based on your knowledge base and emphasize the need for current information verification."""
+            
+            messages.append({"role": "user", "content": user_message})
+            
+            # 7. Generate ultra-intelligent response
+            client = get_openai_client()
+            if not client:
+                raise Exception("OpenAI client not available")
+            response = client.chat.completions.create(
+                model=GPT_MODEL,
+                messages=messages,
+                max_tokens=MAX_TOKENS,
+                temperature=TEMPERATURE,
+                top_p=TOP_P,
+                presence_penalty=PRESENCE_PENALTY,
+                frequency_penalty=FREQUENCY_PENALTY,
+                stream=False
+            )
+            
+            answer = response.choices[0].message.content
+            
+            # 8. Save conversation for natural flow
+            if CONVERSATION_MEMORY_ENABLED:
+                self.conversation_manager.add_exchange(session_id, query, answer)
+            
+            # 9. Apply Clair system prompt enforcement
+            if self.prompt_enforcer_enabled:
+                answer, enforcement_result = clair_prompt_enforcer.enforce_system_prompt(query, answer)
+            else:
+                enforcement_result = None
+            
+            # 10. Validate response compliance
+            validation_results = self.validator.validate_response_compliance(query, answer)
+            
+            # 11. Create comprehensive result
+            result = {
+                "answer": answer,
+                "query": query,
+                "session_id": session_id,
+                "ultra_intelligence_metadata": {
+                    "query_analysis": {
+                        "type": analysis.query_type.value,
+                        "confidence": analysis.confidence,
+                        "complexity_score": analysis.complexity_score,
+                        "search_strategy": analysis.search_strategy
+                    },
+                    "information_synthesis": synthesis_result,
+                    "sources_used": [s.value for s in analysis.priority_sources],
+                    "multi_source_enabled": True
+                },
+                "conversation_aware": len(conversation_history) > 0,
+                "processing_time_seconds": (datetime.utcnow() - start_time).total_seconds(),
+                "clair_enforcement": {
+                    "enforcer_enabled": self.prompt_enforcer_enabled,
+                    "enforcement_applied": enforcement_result.enforcement_applied if enforcement_result else False,
+                    "language_enforcement": enforcement_result.needs_chinese if enforcement_result else False,
+                    "mandatory_links": enforcement_result.mandatory_links if enforcement_result else [],
+                    "trigger_type": enforcement_result.trigger_type if enforcement_result else "none"
+                },
+                "compliance_validation": validation_results,
+                "token_usage": {
+                    "prompt_tokens": response.usage.prompt_tokens,
+                    "completion_tokens": response.usage.completion_tokens,
+                    "total_tokens": response.usage.total_tokens
+                },
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+            log_debug("Ultra-intelligent processing completed", {
+                "session_id": session_id,
+                "query_type": analysis.query_type.value,
+                "sources_used": len(source_results),
+                "synthesis_confidence": synthesis_result["confidence_score"],
+                "compliance_score": validation_results["compliance_score"],
+                "total_processing_time": result["processing_time_seconds"]
+            })
+            
+            return result
+            
+        except Exception as e:
+            log_debug("Ultra-intelligent processing failed", {"error": str(e)})
+            # Fallback to standard GPT processing
+            return await self.process_query_with_gpt_intelligence(query, context, session_id, filters)
+    
+    def _create_vertex_search_wrapper(self, context: str, vertex_search_func: callable) -> callable:
+        """Create wrapper for Vertex AI search function"""
+        async def vertex_search_wrapper(query: str) -> Dict[str, Any]:
+            if vertex_search_func:
+                # Use provided search function
+                return await vertex_search_func(query)
+            else:
+                # Use existing context or return empty result
+                return {
+                    "context": context,
+                    "highest_similarity_score": 0.8 if context else 0.0,
+                    "documents_found": 1 if context else 0
+                }
+        
+        return vertex_search_wrapper
+    
+    def _create_internet_search_wrapper(self) -> callable:
+        """Create wrapper for internet search function"""
+        async def internet_search_wrapper(query: str) -> Dict[str, Any]:
+            try:
+                search_results = await advanced_internet_search.search_multiple_sources(query)
+                return search_results
+            except Exception as e:
+                log_debug("Internet search wrapper failed", {"error": str(e)})
+                return {
+                    "content": f"Internet search unavailable for: {query}",
+                    "sources": [],
+                    "relevance_score": 0.0,
+                    "total_sources": 0
+                }
+        
+        return internet_search_wrapper
+    
     async def process_query_with_gpt_intelligence(
         self, 
         query: str, 
@@ -373,98 +727,99 @@ class IntelligentAIService:
         session_id: str = "default",
         filters: List[str] = None
     ) -> Dict[str, Any]:
-        """GPT-level query processing with conversation awareness"""
+        """Clean GPT-like conversation processing following OpenAI best practices"""
         track_function_entry("process_query_with_gpt_intelligence")
         
         start_time = datetime.utcnow()
         
-        # 1. Get conversation history
+        # 1. Get conversation history for natural flow
         conversation_history = []
         if CONVERSATION_MEMORY_ENABLED:
             conversation_history = self.conversation_manager.get_conversation_context(session_id)
         
-        # 2. Detect if internet search needed
-        needs_internet = self.internet_service.detect_internet_need(query)
-        internet_context = ""
-        if needs_internet:
-            internet_context = await self.internet_service.search_internet(query)
-        
-        # 3. Build enhanced context
-        enhanced_context_parts = []
-        if context.strip():
-            enhanced_context_parts.append(f"KNOWLEDGE BASE CONTEXT:\n{context}")
-        if internet_context:
-            enhanced_context_parts.append(f"CURRENT INFORMATION:\n{internet_context}")
-        
-        enhanced_context = "\n\n".join(enhanced_context_parts)
-        
-        # 4. Build messages for GPT-level conversation with file-based system prompt
+        # 2. Build messages array following OpenAI Chat Completions best practices
         messages = [
             {"role": "system", "content": CLAIR_SYSTEM_PROMPT_ACTIVE}
         ]
         
-        # Add conversation history
+        # Add conversation history for context
         messages.extend(conversation_history)
         
-        # Add current query with enhanced context
-        if enhanced_context.strip():
-            user_message = f"""{enhanced_context}
+        # 3. Add current user message with enhanced context handling
+        if context.strip():
+            # Context Available scenario - reference specific documents
+            user_message = f"""CONTEXT FROM OFFICIAL DOCUMENTS:
+{context}
 
-QUESTION: {query}
+CLIENT QUESTION: {query}
 
-IMPORTANT: Please provide a brief, concise response that directly addresses the question. Focus on the most relevant information."""
+Please provide advice based on the specific policy information above. Reference exact provisions, rates, and terms where available."""
         else:
-            user_message = f"""QUESTION: {query}
+            # Context Limited scenario - use general knowledge with disclaimers
+            user_message = f"""CLIENT QUESTION: {query}
 
-Note: No specific document context available from our knowledge base. Please use your general knowledge and provide a helpful response.
-
-IMPORTANT: Please provide a brief, concise response that directly addresses the question. Focus on the most relevant information."""
+Note: No specific policy documents are available for this query. Please provide general industry guidance and emphasize the need for document verification."""
         
         messages.append({"role": "user", "content": user_message})
         
-        # 5. Generate GPT-level response
+        # 4. Generate response using optimal GPT-like parameters
         try:
-            response = openai_client.chat.completions.create(
+            client = get_openai_client()
+            if not client:
+                raise Exception("OpenAI client not available")
+            response = client.chat.completions.create(
                 model=GPT_MODEL,
                 messages=messages,
-                max_tokens=MAX_TOKENS,  # Use standard token limit for concise responses
+                max_tokens=MAX_TOKENS,
                 temperature=TEMPERATURE,
+                top_p=TOP_P,
+                presence_penalty=PRESENCE_PENALTY,
+                frequency_penalty=FREQUENCY_PENALTY,
                 stream=False
             )
             
             answer = response.choices[0].message.content
             
-            # 6. Save conversation exchange if memory enabled
+            # 5. Save conversation for natural flow
             if CONVERSATION_MEMORY_ENABLED:
                 self.conversation_manager.add_exchange(session_id, query, answer)
             
-            # 7. Enhanced result with GPT-level metadata
+            # 6. Apply Clair system prompt enforcement
+            if self.prompt_enforcer_enabled:
+                answer, enforcement_result = clair_prompt_enforcer.enforce_system_prompt(query, answer)
+            else:
+                enforcement_result = None
+            
+            # 7. Validate response compliance
+            validation_results = self.validator.validate_response_compliance(query, answer)
+            
+            # 8. Return enhanced result with compliance validation
             result = {
                 "answer": answer,
                 "query": query,
                 "session_id": session_id,
                 "conversation_aware": len(conversation_history) > 0,
-                "internet_enhanced": bool(internet_context),
                 "context_used": bool(context.strip()),
                 "processing_time_seconds": (datetime.utcnow() - start_time).total_seconds(),
+                "clair_enforcement": {
+                    "enforcer_enabled": self.prompt_enforcer_enabled,
+                    "enforcement_applied": enforcement_result.enforcement_applied if enforcement_result else False,
+                    "language_enforcement": enforcement_result.needs_chinese if enforcement_result else False,
+                    "mandatory_links": enforcement_result.mandatory_links if enforcement_result else [],
+                    "trigger_type": enforcement_result.trigger_type if enforcement_result else "none"
+                },
+                "compliance_validation": validation_results,
                 "token_usage": {
                     "prompt_tokens": response.usage.prompt_tokens,
                     "completion_tokens": response.usage.completion_tokens,
                     "total_tokens": response.usage.total_tokens
                 },
-                "gpt_level_features": {
-                    "conversation_memory": CONVERSATION_MEMORY_ENABLED,
-                    "internet_access": INTERNET_ACCESS_ENABLED,
-                    "enhanced_reasoning": True,
-                    "domain_expertise": "life_insurance"
-                },
                 "timestamp": datetime.utcnow().isoformat()
             }
             
-            log_debug("GPT-level query processed", {
+            log_debug("Natural conversation processed", {
                 "session_id": session_id,
                 "conversation_turns": len(conversation_history) // 2,
-                "internet_used": bool(internet_context),
                 "context_used": bool(context.strip()),
                 "tokens_used": response.usage.total_tokens
             })
@@ -472,9 +827,18 @@ IMPORTANT: Please provide a brief, concise response that directly addresses the 
             return result
             
         except Exception as e:
-            log_debug("Error in GPT-level processing", {"error": str(e)})
-            # Fallback to domain-specific processing
-            return self.process_query(query, context, filters)
+            log_debug("Error in conversation processing", {"error": str(e)})
+            # Clean fallback response
+            return {
+                "answer": "I apologize, but I'm experiencing a technical issue. Could you please try asking your question again?",
+                "query": query,
+                "session_id": session_id,
+                "conversation_aware": False,
+                "context_used": False,
+                "processing_time_seconds": (datetime.utcnow() - start_time).total_seconds(),
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat()
+            }
 
 # Global AI service instance
 ai_service = IntelligentAIService()
@@ -487,7 +851,11 @@ def embed_text(text: str) -> List[float]:
         if not text or not text.strip():
             return [0.0] * 1536
         
-        response = openai_client.embeddings.create(
+        client = get_openai_client()
+        if not client:
+            log_debug("OpenAI client not available for embeddings", {"text_length": len(text)})
+            return [0.0] * 1536
+        response = client.embeddings.create(
             input=[text], 
             model=EMBED_MODEL
         )

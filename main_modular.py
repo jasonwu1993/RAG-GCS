@@ -551,38 +551,26 @@ async def chat_ask_question(request: Request):
         if not query:
             return {"error": "No query provided", "status": "error"}
         
-        # Load Clair system prompt
-        clair_system_prompt = ""
+        # Route ALL queries through the proper AI service with enforcement
         try:
-            with open("Clair-sys-prompt.txt", "r", encoding="utf-8") as f:
-                clair_system_prompt = f.read().strip()
-        except Exception as e:
-            print(f"⚠️ Could not load Clair system prompt: {e}")
-            clair_system_prompt = "You are Clair, an expert AI financial advisor specializing in life insurance and financial planning."
-        
-        # Intelligent response based on query type
-        if any(term in query.lower() for term in ["insurance", "policy", "premium", "coverage", "beneficiary", "life insurance", "financial planning"]):
-            # Financial/Insurance query - use knowledge base
-            answer = f"Thank you for your question about {query}. As Clair, your AI financial advisor, I specialize in life insurance and financial planning. Based on our comprehensive knowledge base of life insurance documents, I can provide expert guidance on policy types, premium calculations, coverage assessment, and financial planning strategies. Let me help you with personalized advice tailored to your needs."
-            sources = ["Clair Knowledge Base", "Life Insurance Documentation", "Financial Planning Guidelines"]
-            routing_decision = "knowledge_base"
-        else:
-            # General query - could benefit from broader knowledge
-            answer = f"Hello! I'm Clair, your trusted AI financial advisor. While your question about '{query}' may not be directly related to life insurance, I'm here to help with any financial planning needs. If you have questions about insurance products, policy management, or financial strategies, I can provide expert guidance based on my specialized knowledge base."
-            sources = ["Clair AI Assistant", "General Financial Knowledge"]
-            routing_decision = "general_knowledge"
-        
-        return {
-            "answer": answer,
-            "sources": sources,
-            "query": query,
-            "routing_decision": routing_decision,
-            "system_prompt_active": True,
-            "model": "Clair-GPT-4o",
-            "timestamp": datetime.utcnow().isoformat(),
-            "version": VERSION,
-            "total_requests": global_state.request_count
-        }
+            from chat_router import enhanced_ask_question
+            # Create proper request format for chat router
+            request._json = body  # Set the JSON data for the chat router
+            return await enhanced_ask_question(request)
+        except Exception as ai_error:
+            print(f"⚠️ AI service failed, using fallback: {ai_error}")
+            
+            # Fallback response - simple acknowledgment without hardcoded language
+            return {
+                "answer": "I understand you have a question. Let me help you with that.",
+                "query": query,
+                "routing_decision": "fallback",
+                "system_prompt_active": False,
+                "model": "Fallback",
+                "timestamp": datetime.utcnow().isoformat(),
+                "version": VERSION,
+                "error": str(ai_error)
+            }
         
     except Exception as e:
         print(f"❌ Chat error: {e}")

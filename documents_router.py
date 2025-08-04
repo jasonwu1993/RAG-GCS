@@ -363,7 +363,8 @@ async def list_files():
                     "type": "file",
                     "mime_type": file_data.get('mime_type', 'application/octet-stream'),
                     "size": file_data.get('size', 0),
-                    "processed_time": file_data.get('processed_time', file_data.get('modified_time'))
+                    "processed_time": file_data.get('processed_time', file_data.get('modified_time')),
+                    "selected": True  # Default to selected for "Select ALL" behavior
                 }
                 file_list.append(file_info)
                 
