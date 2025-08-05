@@ -22,7 +22,18 @@ from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+# System identification - define early for fallback functions  
+VERSION = "6.4-CHAT-ENDPOINTS-CLAIR-AI"
+BUILD_DATE = "2025-08-04"
+
 # Import core components only - simplified for debugging
+core_available = False
+initialize_all_services = None
+health_check = None
+global_state = None
+log_debug = None
+track_function_entry = None
+
 try:
     from core import initialize_all_services, health_check, global_state, log_debug, track_function_entry
     print("✅ Core imports successful")
@@ -30,7 +41,9 @@ try:
 except Exception as e:
     print(f"❌ Core import failed: {e}")
     core_available = False
-    # Fallback functions to prevent startup failure
+    
+# Fallback functions to prevent startup failure (always available)
+if not core_available:
     def initialize_all_services(): return {"error": "Core not available"}
     def health_check(): return {"status": "healthy", "version": VERSION}
     def log_debug(msg, data=None): print(f"[DEBUG] {msg}")
@@ -84,10 +97,6 @@ try:
     print("✅ Config import successful")
 except Exception as e:
     print(f"❌ Config import failed: {e}")
-
-# System identification
-VERSION = "6.4-CHAT-ENDPOINTS-CLAIR-AI"
-BUILD_DATE = "2025-08-04"
 
 print(f"🚀 Starting Enhanced RAG Clair System {VERSION} - Built {BUILD_DATE}")
 print("🏗️ Modular SOTA Architecture with Professional Financial Advisor")
