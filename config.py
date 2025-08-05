@@ -18,11 +18,11 @@ EMBED_MODEL = "text-embedding-3-small"
 SIMILARITY_THRESHOLD = 0.75
 TOP_K = 3
 GPT_MODEL = "gpt-4o"
-MAX_TOKENS = 1000  # Optimized for faster responses while maintaining quality
-TEMPERATURE = 0.7  # Optimal for friendly yet professional tone
-TOP_P = 0.95  # Slightly focused for faster generation
-PRESENCE_PENALTY = 0.6  # Encourage varied responses, avoid repetition
-FREQUENCY_PENALTY = 0.0  # No frequency penalty for natural flow
+MAX_TOKENS = 1500  # Increased for comprehensive responses, especially with context
+TEMPERATURE = 0.8  # Higher creativity for natural conversations and hotkey handling
+TOP_P = 1.0  # Full nucleus sampling for maximum natural language variety
+PRESENCE_PENALTY = 0.3  # Reduced to allow natural topic continuation
+FREQUENCY_PENALTY = 0.1  # Slight penalty to avoid repetitive phrasing
 
 # Performance Optimization Settings
 REQUEST_TIMEOUT = 30  # Timeout for API requests

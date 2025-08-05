@@ -440,8 +440,8 @@ class IntelligentAIService:
         else:
             self.ultra_intelligence_enabled = False
         
-        # Initialize Clair system prompt enforcer
-        self.prompt_enforcer_enabled = prompt_enforcer_available
+        # Initialize Clair system prompt enforcer - DISABLED to let GPT handle everything naturally
+        self.prompt_enforcer_enabled = False  # Was: prompt_enforcer_available
         
         # Initialize hotkey handler - DISABLED to let GPT handle hotkeys with full context
         self.hotkey_handler_enabled = False  # Was: hotkey_handler_available
