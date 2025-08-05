@@ -443,8 +443,8 @@ class IntelligentAIService:
         # Initialize Clair system prompt enforcer
         self.prompt_enforcer_enabled = prompt_enforcer_available
         
-        # Initialize hotkey handler
-        self.hotkey_handler_enabled = hotkey_handler_available
+        # Initialize hotkey handler - DISABLED to let GPT handle hotkeys with full context
+        self.hotkey_handler_enabled = False  # Was: hotkey_handler_available
     
     def _detect_english_simple(self, text: str) -> bool:
         """Simple English detection for hotkey language preference"""
