@@ -84,7 +84,7 @@ STRUCTURED_OUTPUT_SCHEMA = {
                     "description": {"type": "string", "maxLength": 50}
                 },
                 "required": ["key", "emoji", "description"],
-                "additionalProperties": false
+                "additionalProperties": False
             },
             "maxItems": 7,
             "description": "Contextual hotkey suggestions for user engagement"
@@ -116,11 +116,11 @@ STRUCTURED_OUTPUT_SCHEMA = {
                     "description": "Dynamic context relevance assessment"
                 }
             },
-            "additionalProperties": false
+            "additionalProperties": False
         }
     },
     "required": ["response", "language", "conversation_context", "confidence_level"],
-    "additionalProperties": false
+    "additionalProperties": False
 }
 
 # Performance Optimization Settings
