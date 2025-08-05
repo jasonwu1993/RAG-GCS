@@ -56,7 +56,7 @@ VOICE_CONFIG = {
 }
 
 # Structured Outputs Configuration (GPT-4o-2024-08-06)
-ENABLE_STRUCTURED_OUTPUTS = True  # API handles structured format, prompt provides natural responses
+ENABLE_STRUCTURED_OUTPUTS = True  # HYBRID: Structured data for systems, natural responses for users
 STRUCTURED_OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -71,10 +71,52 @@ STRUCTURED_OUTPUT_SCHEMA = {
         "confidence_level": {
             "type": "string", 
             "description": "Confidence in the response accuracy (high, medium, or low)"
+        },
+        "conversation_context": {
+            "type": "string",
+            "description": "Type of interaction (new_query, hotkey_continuation, follow_up, clarification)"
+        },
+        "hotkey_suggestions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string"},
+                    "emoji": {"type": "string"},
+                    "description": {"type": "string"}
+                },
+                "required": ["key", "emoji", "description"],
+                "additionalProperties": False
+            },
+            "description": "Contextual hotkey suggestions for user engagement"
+        },
+        "multimedia_content": {
+            "type": "object",
+            "properties": {
+                "images": {"type": "array", "items": {"type": "string"}},
+                "documents": {"type": "array", "items": {"type": "string"}},
+                "forms": {"type": "array", "items": {"type": "object"}},
+                "charts": {"type": "array", "items": {"type": "object"}}
+            },
+            "description": "Multimedia and interactive content suggestions"
+        },
+        "action_items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "type": {"type": "string"},
+                    "title": {"type": "string"},
+                    "data": {"type": "object"}
+                },
+                "required": ["type", "title"],
+                "additionalProperties": False
+            },
+            "description": "Interactive actions like forms, calculators, comparisons"
         }
     },
     "required": ["response", "language", "confidence_level"],
-    "additionalProperties": false
+    "additionalProperties": False
 }
 
 # Performance Optimization Settings
@@ -324,6 +366,26 @@ Based on your inquiry about {products}, here's a comprehensive comparison:
 # Clair's specialized financial advisor system prompt (fallback/general use)
 CLAIR_SYSTEM_PROMPT_FALLBACK = """You are Clair, a highly intelligent AI assistant with comprehensive knowledge and reasoning capabilities. You have specialized expertise in life insurance and financial planning, but can help with any topic.
 
+CRITICAL: RESPONSE FORMAT
+You MUST format your response as a JSON object with the following structure:
+{
+  "response": "Your main conversational response in natural language goes here",
+  "language": "chinese" or "english" or "mixed",
+  "confidence_level": "high" or "medium" or "low",
+  "conversation_context": "new_query" or "hotkey_continuation" or "follow_up" or "clarification",
+  "hotkey_suggestions": [
+    {"key": "A", "emoji": "➡️", "description": "Continue"},
+    {"key": "R", "emoji": "📋", "description": "Recommend"}
+  ],
+  "multimedia_content": {
+    "images": [],
+    "documents": [],
+    "forms": [],
+    "charts": []
+  },
+  "action_items": []
+}
+
 CORE CAPABILITIES:
 • Expert-level knowledge across all domains
 • Real-time internet access when current information is needed  
@@ -365,6 +427,26 @@ Remember: You're not just answering questions - you're having an intelligent con
 
 # Clair's professional financial advisor system prompt (primary)
 CLAIR_SYSTEM_PROMPT = """You are Clair, an expert AI financial advisor (AI财富专家) specializing in life insurance and financial planning. Your role is to provide accurate, helpful, and personalized advice based on official policy documents and financial regulations.
+
+## CRITICAL: RESPONSE FORMAT
+You MUST format your response as a JSON object with the following structure:
+{
+  "response": "Your main conversational response in natural language goes here",
+  "language": "chinese" or "english" or "mixed",
+  "confidence_level": "high" or "medium" or "low",
+  "conversation_context": "new_query" or "hotkey_continuation" or "follow_up" or "clarification",
+  "hotkey_suggestions": [
+    {"key": "A", "emoji": "➡️", "description": "Continue"},
+    {"key": "R", "emoji": "📋", "description": "Recommend"}
+  ],
+  "multimedia_content": {
+    "images": [],
+    "documents": [],
+    "forms": [],
+    "charts": []
+  },
+  "action_items": []
+}
 
 ## IMPORTANT LANGUAGE MATCHING RULE:
 You MUST respond in the same language as the user's query:
