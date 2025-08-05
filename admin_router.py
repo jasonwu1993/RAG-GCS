@@ -29,7 +29,7 @@ except ImportError as e:
     core_imports_successful = False
     # Use fallback MockState
     global_state = MockState()
-    def health_check(): return {"status": "degraded", "version": "6.1-PROFESSIONAL"}
+    def health_check(): return {"status": "degraded", "version": "6.4-CHAT-ENDPOINTS-CLAIR-AI"}
     def emergency_reset(): return {"status": "reset complete"}
     def get_current_metrics(): return {}
     def toggle_debug_mode(): return False
@@ -37,8 +37,8 @@ from config import *
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-VERSION = "6.1-PROFESSIONAL"  
-BUILD_DATE = "2025-08-03"
+VERSION = "6.4-CHAT-ENDPOINTS-CLAIR-AI"  
+BUILD_DATE = "2025-08-04"
 
 def _get_service_status(service_name: str) -> bool:
     """Safely check service availability"""
