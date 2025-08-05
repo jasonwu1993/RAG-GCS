@@ -84,15 +84,49 @@ async def enhanced_ask_question(request: Request):
                     "num_neighbors": TOP_K
                 }
                 
-                # Add filters if specified
+                # INTELLIGENT SEARCH STRATEGY: Try selected docs first, then all docs if needed
+                search_attempts = []
+                
+                # First attempt: Search in selected documents if specified
                 if filters:
                     restricts = []
                     for filepath in filters:
                         restricts.append({"namespace": "filepath", "allow_list": [filepath]})
                     search_params["filter"] = restricts
+                    search_attempts.append(("selected_documents", search_params.copy()))
                 
-                # Perform search
-                search_results = index_endpoint.find_neighbors(**search_params)
+                # Second attempt: Search all documents (remove filter)
+                search_params_all = search_params.copy()
+                if "filter" in search_params_all:
+                    del search_params_all["filter"]
+                search_attempts.append(("all_documents", search_params_all))
+                
+                # Try search attempts until we find relevant results
+                search_results = None
+                search_method_used = "no_search"
+                
+                for attempt_name, params in search_attempts:
+                    search_results = index_endpoint.find_neighbors(**params)
+                    if search_results and len(search_results) > 0:
+                        # Check if we found any relevant results
+                        temp_chunks = []
+                        temp_highest = -1.0
+                        neighbors = search_results[0]
+                        for neighbor in neighbors:
+                            similarity_score = 1 - neighbor.distance
+                            if similarity_score >= SIMILARITY_THRESHOLD:
+                                temp_chunks.append(neighbor)
+                            if similarity_score > temp_highest:
+                                temp_highest = similarity_score
+                        
+                        # If we found relevant results or this is our last attempt, use these results
+                        if temp_chunks or attempt_name == "all_documents":
+                            search_method_used = attempt_name
+                            log_debug(f"Intelligent search successful with {attempt_name}", {
+                                "relevant_chunks": len(temp_chunks),
+                                "highest_score": temp_highest
+                            })
+                            break
                 
                 # Process results (preserved original logic)
                 if search_results and len(search_results) > 0:
@@ -110,7 +144,8 @@ async def enhanced_ask_question(request: Request):
                 context_metadata = {
                     "chunks_found": len(relevant_chunks),
                     "highest_similarity": highest_score,
-                    "search_method": "vector_search"
+                    "search_method": f"intelligent_{search_method_used}",
+                    "search_strategy": "intelligent_fallback"
                 }
                 
             except Exception as e:

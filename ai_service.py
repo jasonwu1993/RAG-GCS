@@ -512,9 +512,9 @@ class IntelligentAIService:
         self.internet_service = InternetSearchService()
         # self.validator = ResponseValidator()  # Removed - let GPT handle compliance naturally
         
-        # Initialize ultra-intelligent routing system - DISABLED for simplicity and quality
-        # Complex routing adds latency and potential errors - let GPT handle intelligence directly
-        self.ultra_intelligence_enabled = False  # Was: intelligent_routing_available
+        # Initialize ultra-intelligent routing system - DISABLED for simplicity but enable intelligent search
+        # Use simpler intelligent routing in chat_router instead of complex ultra-intelligence system
+        self.ultra_intelligence_enabled = False  # Use simple intelligent search in chat_router
         
         # Initialize Clair system prompt enforcer - DISABLED to let GPT handle everything naturally
         self.prompt_enforcer_enabled = False  # Was: prompt_enforcer_available
@@ -1127,7 +1127,38 @@ Note: Limited current information available. Please provide expert guidance base
                 answer = response.choices[0].message.content
                 
                 # Generate intelligent hotkey suggestions for regular completion
+                # For hotkeys and short queries, check conversation history for language context
                 detected_language = self._detect_user_language(query)
+                
+                # HOTKEY LANGUAGE DETECTION: Check conversation history for single letters
+                if len(query.strip()) <= 2 and query.strip().upper() in ['A', 'R', 'E', 'C', 'S', 'Y', 'L']:
+                    # This is likely a hotkey - check conversation history for language context
+                    conversation_history = []
+                    if CONVERSATION_MEMORY_ENABLED:
+                        conversation_history = self.conversation_manager.get_conversation_context(session_id)
+                    
+                    # Look for language clues in recent conversation history
+                    for msg in reversed(conversation_history[-6:]):  # Check last 3 exchanges
+                        if msg.get("role") == "user":
+                            msg_content = msg.get("content", "")
+                            if len(msg_content.strip()) > 2:  # Ignore other hotkeys
+                                hist_language = self._detect_user_language(msg_content)
+                                if hist_language == "chinese":
+                                    detected_language = "chinese"
+                                    log_debug("Hotkey language detection", {
+                                        "hotkey": query,
+                                        "detected_from_history": "chinese",
+                                        "history_sample": msg_content[:50]
+                                    })
+                                    break
+                                elif hist_language == "english":
+                                    detected_language = "english"
+                                    log_debug("Hotkey language detection", {
+                                        "hotkey": query,
+                                        "detected_from_history": "english", 
+                                        "history_sample": msg_content[:50]
+                                    })
+                                    break
                 
                 if detected_language == "chinese":
                     contextual_hotkeys = [
@@ -1144,9 +1175,14 @@ Note: Limited current information available. Please provide expert guidance base
                         "C: Calculate costs"
                     ]
                 
+                # Determine conversation context based on query type
+                conversation_context = "new_query"
+                if len(query.strip()) <= 2 and query.strip().upper() in ['A', 'R', 'E', 'C', 'S', 'Y', 'L']:
+                    conversation_context = "hotkey_continuation"
+                
                 response_metadata = {
                     "language": detected_language,
-                    "conversation_context": "new_query",
+                    "conversation_context": conversation_context,
                     "hotkey_suggestions": contextual_hotkeys,
                     "confidence_level": "high",
                     "structured_parsing_success": False,
