@@ -149,6 +149,7 @@ async def enhanced_ask_question(request: Request):
             "documents_found": len(relevant_chunks),
             "highest_similarity_score": highest_score,
             "filters_applied": filters,
+            "hotkey_suggestions": ai_result.get("hotkey_suggestions", []),
             
             # GPT-level capabilities
             "capabilities": ai_result.get("gpt_level_features", {
