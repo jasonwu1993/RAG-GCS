@@ -105,6 +105,11 @@ Vector Embedding → Vertex AI Index → Search/Retrieval → AI Response
 
 ## Development Notes
 
+### Commit Standards
+- Use clean, professional commit messages without AI attribution
+- No automatic copyright or "Generated with Claude Code" messages
+- Focus on describing the actual changes and their business value
+
 ### Entry Points
 - **Production**: Use `main_modular.py` (modular architecture)
 - **Legacy**: `main.py` available for backward compatibility
