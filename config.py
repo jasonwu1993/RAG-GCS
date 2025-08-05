@@ -56,7 +56,7 @@ VOICE_CONFIG = {
 }
 
 # Structured Outputs Configuration (GPT-4o-2024-08-06)
-ENABLE_STRUCTURED_OUTPUTS = True  # Enable 100% reliable JSON schema following
+ENABLE_STRUCTURED_OUTPUTS = False  # Temporarily disabled to test API call issue
 STRUCTURED_OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
