@@ -1079,17 +1079,36 @@ Note: Limited current information available. Please provide expert guidance base
                         log_debug("HYBRID fallback failed", {"error": str(extract_error)})
                         answer = raw_content
                     
-                    # Create minimal structured metadata for fallback
+                    # Create intelligent structured metadata for fallback
+                    # Extract language from user query
+                    detected_language = self._detect_user_language(query)
+                    
+                    # Generate contextual hotkeys based on detected language and conversation
+                    if detected_language == "chinese":
+                        contextual_hotkeys = [
+                            "A: 继续详细说明",
+                            "R: 推荐具体方案", 
+                            "E: 解释专业术语",
+                            "C: 计算保费估算"
+                        ]
+                    else:
+                        contextual_hotkeys = [
+                            "A: Continue with details",
+                            "R: Recommend plans",
+                            "E: Explain concepts", 
+                            "C: Calculate costs"
+                        ]
+                    
                     response_metadata = {
-                        "language": "unknown",
+                        "language": detected_language,
                         "conversation_context": "new_query", 
-                        "hotkey_suggestions": [],
+                        "hotkey_suggestions": contextual_hotkeys,
                         "confidence_level": "medium",
                         "structured_parsing_success": False,
                         "multimedia_content": {"images": [], "documents": [], "forms": [], "charts": []},
                         "action_items": [],
                         "agentic_metadata": {},
-                        "parsing_method": "fallback_extraction",
+                        "parsing_method": "intelligent_fallback_extraction",
                         "parsing_error": str(e)
                     }
             else:
@@ -1106,7 +1125,36 @@ Note: Limited current information available. Please provide expert guidance base
                     timeout=REQUEST_TIMEOUT
                 )
                 answer = response.choices[0].message.content
-                response_metadata = {}
+                
+                # Generate intelligent hotkey suggestions for regular completion
+                detected_language = self._detect_user_language(query)
+                
+                if detected_language == "chinese":
+                    contextual_hotkeys = [
+                        "A: 继续详细说明",
+                        "R: 推荐具体方案", 
+                        "E: 解释专业术语",
+                        "C: 计算保费估算"
+                    ]
+                else:
+                    contextual_hotkeys = [
+                        "A: Continue with details",
+                        "R: Recommend plans",
+                        "E: Explain concepts", 
+                        "C: Calculate costs"
+                    ]
+                
+                response_metadata = {
+                    "language": detected_language,
+                    "conversation_context": "new_query",
+                    "hotkey_suggestions": contextual_hotkeys,
+                    "confidence_level": "high",
+                    "structured_parsing_success": False,
+                    "multimedia_content": {"images": [], "documents": [], "forms": [], "charts": []},
+                    "action_items": [],
+                    "agentic_metadata": {},
+                    "parsing_method": "regular_completion_with_hotkeys"
+                }
             
             # 5. Save conversation for natural flow (GPT-Native memory)
             if CONVERSATION_MEMORY_ENABLED:
@@ -1123,6 +1171,7 @@ Note: Limited current information available. Please provide expert guidance base
                 "conversation_aware": len(conversation_history) > 0,
                 "context_used": bool(context.strip()),
                 "processing_time_seconds": (datetime.utcnow() - start_time).total_seconds(),
+                "hotkey_suggestions": response_metadata.get("hotkey_suggestions", []),
                 "gpt_native": {
                     "pure_gpt_response": True,
                     "no_post_processing": True,
