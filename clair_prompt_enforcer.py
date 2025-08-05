@@ -288,8 +288,8 @@ Launch Calculator (https://iul-sim.vercel.app/)"""
     
     def _add_chinese_language_instruction(self, response: str) -> str:
         """Add instruction to generate Chinese response"""
-        instruction = "\n\n[系统提示：请用中文回答客户问题]"
-        return response + instruction
+        # No longer add visible instruction - language should be handled in system prompt
+        return response
 
 # Global enforcer instance
 clair_prompt_enforcer = ClairPromptEnforcer()
