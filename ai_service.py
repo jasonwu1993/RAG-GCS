@@ -733,7 +733,7 @@ Note: Limited current information available. Please provide expert guidance base
         session_id: str = "default",
         filters: List[str] = None
     ) -> Dict[str, Any]:
-        """Clean GPT-like conversation processing following OpenAI best practices"""
+        """GPT-Native conversation processing - Pure GPT intelligence with natural flow"""
         track_function_entry("process_query_with_gpt_intelligence")
         
         start_time = datetime.utcnow()
@@ -753,28 +753,21 @@ Note: Limited current information available. Please provide expert guidance base
         if CONVERSATION_MEMORY_ENABLED:
             conversation_history = self.conversation_manager.get_conversation_context(session_id)
         
-        # 2. Build messages array following OpenAI Chat Completions best practices
+        # 2. Build messages array following GPT-Native best practices
         messages = [
             {"role": "system", "content": CLAIR_SYSTEM_PROMPT_ACTIVE}
         ]
         
-        # Add conversation history for context
+        # Add conversation history for context (unmodified, natural conversation)
         messages.extend(conversation_history)
         
-        # 3. Add current user message with enhanced context handling
+        # 3. GPT-NATIVE MESSAGE CONSTRUCTION - Natural conversation flow
         if context.strip():
-            # Context Available scenario - reference specific documents
-            user_message = f"""CONTEXT FROM OFFICIAL DOCUMENTS:
-{context}
-
-CLIENT QUESTION: {query}
-
-Please provide advice based on the specific policy information above. Reference exact provisions, rates, and terms where available."""
+            # Natural context integration - let GPT understand relevance
+            user_message = f"Here's relevant information from our documents:\n\n{context}\n\n{query}"
         else:
-            # Context Limited scenario - use general knowledge with disclaimers
-            user_message = f"""CLIENT QUESTION: {query}
-
-Note: No specific policy documents are available for this query. Please provide general industry guidance and emphasize the need for document verification."""
+            # Pure natural user input - no formatting interference
+            user_message = query
         
         messages.append({"role": "user", "content": user_message})
         
@@ -797,20 +790,14 @@ Note: No specific policy documents are available for this query. Please provide 
             
             answer = response.choices[0].message.content
             
-            # 5. Save conversation for natural flow
+            # 5. Save conversation for natural flow (GPT-Native memory)
             if CONVERSATION_MEMORY_ENABLED:
                 self.conversation_manager.add_exchange(session_id, query, answer)
             
-            # 6. Apply Clair system prompt enforcement
-            if self.prompt_enforcer_enabled:
-                answer, enforcement_result = clair_prompt_enforcer.enforce_system_prompt(query, answer)
-            else:
-                enforcement_result = None
+            # 6. GPT-NATIVE RESPONSE - No post-processing interference
+            # Let GPT handle all intelligence naturally through system prompt
             
-            # 7. Skip response validation - let GPT handle compliance naturally  
-            validation_results = {"compliance_score": 1.0, "issues": [], "recommendations": []}
-            
-            # 8. Return enhanced result with compliance validation
+            # 7. Return clean, GPT-native result
             result = {
                 "answer": answer,
                 "query": query,
@@ -818,14 +805,12 @@ Note: No specific policy documents are available for this query. Please provide 
                 "conversation_aware": len(conversation_history) > 0,
                 "context_used": bool(context.strip()),
                 "processing_time_seconds": (datetime.utcnow() - start_time).total_seconds(),
-                "clair_enforcement": {
-                    "enforcer_enabled": self.prompt_enforcer_enabled,
-                    "enforcement_applied": enforcement_result.enforcement_applied if enforcement_result else False,
-                    "language_enforcement": enforcement_result.needs_chinese if enforcement_result else False,
-                    "mandatory_links": enforcement_result.mandatory_links if enforcement_result else [],
-                    "trigger_type": enforcement_result.trigger_type if enforcement_result else "none"
+                "gpt_native": {
+                    "pure_gpt_response": True,
+                    "no_post_processing": True,
+                    "natural_conversation": True,
+                    "system_prompt_intelligence": True
                 },
-                "compliance_validation": validation_results,
                 "token_usage": {
                     "prompt_tokens": response.usage.prompt_tokens,
                     "completion_tokens": response.usage.completion_tokens,
