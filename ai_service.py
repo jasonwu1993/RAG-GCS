@@ -1007,8 +1007,24 @@ Note: Limited current information available. Please provide expert guidance base
                             tool_relevance = len(agentic_data.get("tool_recommendations", []))
                             performance_analytics.track_agentic_effectiveness(reflection_quality, planning_depth, tool_relevance)
                 except (json.JSONDecodeError, KeyError) as e:
-                    log_debug("Structured output parsing failed, using raw response", {"error": str(e)})
-                    answer = response.choices[0].message.content
+                    log_debug("Structured output parsing failed, attempting manual extraction", {"error": str(e)})
+                    raw_content = response.choices[0].message.content
+                    
+                    # Try to manually extract the response field from malformed JSON
+                    try:
+                        import re
+                        # Look for "response": "..." pattern
+                        response_match = re.search(r'"response":\s*"([^"]*(?:\\.[^"]*)*)"', raw_content, re.DOTALL)
+                        if response_match:
+                            answer = response_match.group(1).replace('\\"', '"').replace('\\n', '\n')
+                            log_debug("Manual response extraction successful", {"extracted_length": len(answer)})
+                        else:
+                            # If no structured response found, use the raw content
+                            answer = raw_content
+                            log_debug("No structured response pattern found, using raw content")
+                    except Exception as extract_error:
+                        log_debug("Manual extraction failed", {"error": str(extract_error)})
+                        answer = raw_content
                     response_metadata = {
                         "language": "unknown",
                         "conversation_context": "new_query", 
