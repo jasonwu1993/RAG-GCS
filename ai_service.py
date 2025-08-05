@@ -519,18 +519,24 @@ class IntelligentAIService:
         # Initialize Clair system prompt enforcer - DISABLED to let GPT handle everything naturally
         self.prompt_enforcer_enabled = False  # Was: prompt_enforcer_available
         
-        # Initialize hotkey handler - DISABLED to let GPT handle hotkeys with full context
-        self.hotkey_handler_enabled = False  # Was: hotkey_handler_available
+        # Initialize hotkey handler - ENABLED for consistent language responses
+        self.hotkey_handler_enabled = hotkey_handler_available
     
     def _detect_user_language(self, text: str) -> str:
-        """Simple language detection for analytics"""
+        """Enhanced language detection for consistent responses"""
         import re
-        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', text))
-        total_chars = len(text.replace(" ", ""))
         
-        if total_chars == 0:
-            return "unknown"
-        elif chinese_chars / total_chars > 0.3:
+        # Remove whitespace and punctuation for more accurate analysis
+        text_clean = re.sub(r'[^\u4e00-\u9fff\w]', '', text)
+        
+        if len(text_clean) == 0:
+            return "english"  # Default to English for empty/punctuation-only text
+        
+        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', text_clean))
+        total_chars = len(text_clean)
+        
+        # More sensitive threshold for Chinese detection
+        if chinese_chars / total_chars > 0.15:  # Even a few Chinese characters indicate Chinese context
             return "chinese"
         else:
             return "english"
@@ -632,12 +638,21 @@ class IntelligentAIService:
             if CONVERSATION_MEMORY_ENABLED:
                 conversation_history = self.conversation_manager.get_conversation_context(session_id)
             
-            # Check if previous conversation was in Chinese
-            needs_chinese = True
-            for msg in conversation_history[-6:]:  # Check last 3 exchanges
-                if msg.get("role") == "user" and self._detect_english_simple(msg.get("content", "")):
-                    needs_chinese = False
-                    break
+            # Intelligently determine language based on conversation history
+            needs_chinese = False  # Default to English unless Chinese context is found
+            
+            # Check conversation history for language context
+            for msg in reversed(conversation_history[-8:]):  # Check last 4 exchanges
+                if msg.get("role") == "user":
+                    msg_content = msg.get("content", "")
+                    if len(msg_content.strip()) > 2:  # Ignore single letter hotkeys
+                        detected_lang = self._detect_user_language(msg_content)
+                        if detected_lang == "chinese":
+                            needs_chinese = True
+                            break
+                        elif detected_lang == "english":
+                            needs_chinese = False
+                            break
             
             hotkey_response = hotkey_handler.get_hotkey_response(query, needs_chinese)
             
@@ -1032,9 +1047,18 @@ Note: Limited current information available. Please provide expert guidance base
                     
                     # Track performance analytics if enabled
                     if performance_analytics and ENABLE_PERFORMANCE_ANALYTICS:
-                        # Language consistency tracking
+                        # Enhanced language consistency tracking
                         user_lang = self._detect_user_language(query)
                         response_lang = structured_response.get("language", "unknown")
+                        
+                        # For hotkeys, check conversation history for actual language context
+                        if len(query.strip()) <= 2 and query.strip().upper() in ['A', 'R', 'E', 'C', 'S', 'Y', 'L']:
+                            conversation_history = self.conversation_manager.get_conversation_context(session_id)
+                            for msg in reversed(conversation_history[-8:]):
+                                if msg.get("role") == "user" and len(msg.get("content", "").strip()) > 2:
+                                    user_lang = self._detect_user_language(msg.get("content", ""))
+                                    break
+                        
                         performance_analytics.track_language_consistency(user_lang, response_lang, session_id)
                         
                         # Conversation continuity tracking
@@ -1130,35 +1154,34 @@ Note: Limited current information available. Please provide expert guidance base
                 # For hotkeys and short queries, check conversation history for language context
                 detected_language = self._detect_user_language(query)
                 
-                # HOTKEY LANGUAGE DETECTION: Check conversation history for single letters
+                # ENHANCED HOTKEY LANGUAGE DETECTION: Check conversation history for single letters
                 if len(query.strip()) <= 2 and query.strip().upper() in ['A', 'R', 'E', 'C', 'S', 'Y', 'L']:
-                    # This is likely a hotkey - check conversation history for language context
-                    conversation_history = []
+                    # This is likely a hotkey - intelligently determine language from conversation context
                     if CONVERSATION_MEMORY_ENABLED:
                         conversation_history = self.conversation_manager.get_conversation_context(session_id)
                     
-                    # Look for language clues in recent conversation history
-                    for msg in reversed(conversation_history[-6:]):  # Check last 3 exchanges
+                    # Systematic language detection from conversation history
+                    for msg in reversed(conversation_history[-8:]):  # Check last 4 exchanges more thoroughly
                         if msg.get("role") == "user":
                             msg_content = msg.get("content", "")
-                            if len(msg_content.strip()) > 2:  # Ignore other hotkeys
+                            if len(msg_content.strip()) > 2:  # Ignore other hotkeys, focus on real queries
                                 hist_language = self._detect_user_language(msg_content)
                                 if hist_language == "chinese":
                                     detected_language = "chinese"
-                                    log_debug("Hotkey language detection", {
+                                    log_debug("Enhanced hotkey language detection", {
                                         "hotkey": query,
                                         "detected_from_history": "chinese",
                                         "history_sample": msg_content[:50]
                                     })
-                                    break
+                                    break  # Chinese found, stop searching
                                 elif hist_language == "english":
                                     detected_language = "english"
-                                    log_debug("Hotkey language detection", {
+                                    log_debug("Enhanced hotkey language detection", {
                                         "hotkey": query,
                                         "detected_from_history": "english", 
                                         "history_sample": msg_content[:50]
                                     })
-                                    break
+                                    # Continue searching in case there's Chinese context later
                 
                 if detected_language == "chinese":
                     contextual_hotkeys = [

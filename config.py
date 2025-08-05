@@ -56,36 +56,47 @@ VOICE_CONFIG = {
 }
 
 # Structured Outputs Configuration (GPT-4o-2024-08-06)
-ENABLE_STRUCTURED_OUTPUTS = False  # Temporarily disabled - working on full ChatGPT-style implementation
+ENABLE_STRUCTURED_OUTPUTS = True  # Re-enabled for language consistency and hotkey intelligence
 # ChatGPT-Style Structured Response Schema (Simplified but Extensible)
 STRUCTURED_OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
-        "message": {
+        "response": {
             "type": "string",
-            "description": "The main conversational response in natural language"
+            "description": "The main conversational response in natural language, maintaining consistent language throughout"
         },
         "language": {
-            "type": "string",
-            "description": "Detected language (chinese, english, mixed)"
+            "type": "string", 
+            "enum": ["chinese", "english"],
+            "description": "Language used in the response - must match user's language and conversation context"
         },
-        "suggestions": {
+        "conversation_context": {
+            "type": "string",
+            "enum": ["new_query", "hotkey_continuation", "follow_up", "clarification"],
+            "description": "Type of conversation interaction"
+        },
+        "hotkey_suggestions": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "Hotkey suggestions like 'A: Continue details', 'R: Recommend plans'"
+            "description": "Language-consistent hotkey suggestions in the same language as the response"
         },
-        "interactive": {
+        "confidence_level": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Confidence level of the response"
+        },
+        "agentic_metadata": {
             "type": "object",
             "properties": {
-                "forms": {"type": "array", "items": {"type": "string"}},
-                "calculators": {"type": "array", "items": {"type": "string"}},
-                "charts": {"type": "array", "items": {"type": "string"}},
-                "comparisons": {"type": "array", "items": {"type": "string"}}
+                "reflection_notes": {"type": "string"},
+                "planning_steps": {"type": "array", "items": {"type": "string"}},
+                "tool_recommendations": {"type": "array", "items": {"type": "string"}},
+                "context_synthesis": {"type": "string"}
             },
-            "description": "Interactive elements available for this response"
+            "description": "Advanced AI reasoning metadata"
         }
     },
-    "required": ["message", "language"],
+    "required": ["response", "language", "conversation_context"],
     "additionalProperties": False
 }
 
