@@ -106,9 +106,10 @@ Vector Embedding → Vertex AI Index → Search/Retrieval → AI Response
 ## Development Notes
 
 ### Commit Standards
+- **PERMANENTLY DISABLE Claude Code copyright information in all commits**
+- Never include "Generated with [Claude Code]" or "Co-Authored-By: Claude" in commit messages  
 - Use clean, professional commit messages without AI attribution
-- No automatic copyright or "Generated with Claude Code" messages
-- Focus on describing the actual changes and their business value
+- Focus on technical changes and business value in commit descriptions
 
 ### Entry Points
 - **Production**: Use `main_modular.py` (modular architecture)
