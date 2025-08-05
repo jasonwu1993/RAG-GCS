@@ -56,7 +56,7 @@ VOICE_CONFIG = {
 }
 
 # Structured Outputs Configuration (GPT-4o-2024-08-06)
-ENABLE_STRUCTURED_OUTPUTS = False  # Temporarily disabled to test API call issue
+ENABLE_STRUCTURED_OUTPUTS = True  # Re-enabled with simplified schema
 STRUCTURED_OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -65,62 +65,16 @@ STRUCTURED_OUTPUT_SCHEMA = {
             "description": "The main conversational response content in natural language"
         },
         "language": {
-            "type": "string", 
-            "enum": ["chinese", "english", "mixed"],
-            "description": "Detected language of the user's input for consistency tracking"
-        },
-        "conversation_context": {
             "type": "string",
-            "enum": ["new_query", "hotkey_continuation", "follow_up", "clarification"],
-            "description": "Type of conversational interaction"
-        },
-        "hotkey_suggestions": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "key": {"type": "string", "maxLength": 1},
-                    "emoji": {"type": "string", "maxLength": 2},
-                    "description": {"type": "string", "maxLength": 50}
-                },
-                "required": ["key", "emoji", "description"],
-                "additionalProperties": False
-            },
-            "maxItems": 7,
-            "description": "Contextual hotkey suggestions for user engagement"
+            "description": "Detected language of the user's input (chinese, english, or mixed)"
         },
         "confidence_level": {
-            "type": "string",
-            "enum": ["high", "medium", "low"],
-            "description": "Confidence in the response accuracy based on available context"
-        },
-        "agentic_metadata": {
-            "type": "object",
-            "properties": {
-                "reflection_notes": {
-                    "type": "string",
-                    "description": "Self-reflection on response quality and potential improvements"
-                },
-                "planning_steps": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Multi-step planning for complex queries"
-                },
-                "tool_recommendations": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "Recommended tools or actions for follow-up"
-                },
-                "context_synthesis": {
-                    "type": "string",
-                    "description": "Dynamic context relevance assessment"
-                }
-            },
-            "additionalProperties": False
+            "type": "string", 
+            "description": "Confidence in the response accuracy (high, medium, or low)"
         }
     },
-    "required": ["response", "language", "conversation_context", "confidence_level"],
-    "additionalProperties": False
+    "required": ["response", "language", "confidence_level"],
+    "additionalProperties": false
 }
 
 # Performance Optimization Settings

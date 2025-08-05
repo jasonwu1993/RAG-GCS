@@ -729,23 +729,76 @@ Note: Limited current information available. Please provide expert guidance base
             
             messages.append({"role": "user", "content": user_message})
             
-            # 7. Generate ultra-intelligent response
+            # 7. Generate ultra-intelligent response with Structured Outputs
             client = get_openai_client()
             if not client:
                 raise Exception("OpenAI client not available")
-            response = client.chat.completions.create(
-                model=GPT_MODEL,
-                messages=messages,
-                max_tokens=MAX_TOKENS,
-                temperature=TEMPERATURE,
-                top_p=TOP_P,
-                presence_penalty=PRESENCE_PENALTY,
-                frequency_penalty=FREQUENCY_PENALTY,
-                stream=False,
-                timeout=REQUEST_TIMEOUT
-            )
             
-            answer = response.choices[0].message.content
+            # Configure Structured Outputs for 100% reliability (GPT-4o-2024-08-06)
+            if ENABLE_STRUCTURED_OUTPUTS:
+                response = client.chat.completions.create(
+                    model=GPT_MODEL,
+                    messages=messages,
+                    max_tokens=MAX_TOKENS,
+                    temperature=TEMPERATURE,
+                    top_p=TOP_P,
+                    presence_penalty=PRESENCE_PENALTY,
+                    frequency_penalty=FREQUENCY_PENALTY,
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "clair_response",
+                            "schema": STRUCTURED_OUTPUT_SCHEMA,
+                            "strict": True
+                        }
+                    },
+                    timeout=REQUEST_TIMEOUT
+                )
+                
+                # Parse structured response for guaranteed reliability
+                import json
+                try:
+                    structured_response = json.loads(response.choices[0].message.content)
+                    answer = structured_response.get("response", response.choices[0].message.content)
+                    
+                    # Extract agentic metadata if available
+                    response_metadata = {
+                        "language": structured_response.get("language", "unknown"),
+                        "confidence_level": structured_response.get("confidence_level", "medium"),
+                        "structured_parsing_success": True,
+                        "agentic_metadata": structured_response.get("agentic_metadata", {})
+                    }
+                    
+                    log_debug("Ultra Intelligence structured output parsed successfully", {
+                        "language": response_metadata["language"],
+                        "confidence": response_metadata["confidence_level"],
+                        "response_length": len(answer)
+                    })
+                    
+                except (json.JSONDecodeError, KeyError) as e:
+                    log_debug("Ultra Intelligence structured output parsing failed", {"error": str(e)})
+                    answer = response.choices[0].message.content
+                    response_metadata = {
+                        "language": "unknown",
+                        "confidence_level": "medium",
+                        "structured_parsing_success": False,
+                        "agentic_metadata": {}
+                    }
+            else:
+                # Fallback to regular completion
+                response = client.chat.completions.create(
+                    model=GPT_MODEL,
+                    messages=messages,
+                    max_tokens=MAX_TOKENS,
+                    temperature=TEMPERATURE,
+                    top_p=TOP_P,
+                    presence_penalty=PRESENCE_PENALTY,
+                    frequency_penalty=FREQUENCY_PENALTY,
+                    stream=False,
+                    timeout=REQUEST_TIMEOUT
+                )
+                answer = response.choices[0].message.content
+                response_metadata = {"structured_parsing_success": False}
             
             # 8. Save conversation for natural flow
             if CONVERSATION_MEMORY_ENABLED:
@@ -791,6 +844,7 @@ Note: Limited current information available. Please provide expert guidance base
                     "completion_tokens": response.usage.completion_tokens,
                     "total_tokens": response.usage.total_tokens
                 },
+                "structured_output_metadata": response_metadata,
                 "timestamp": datetime.utcnow().isoformat()
             }
             
