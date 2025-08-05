@@ -17,12 +17,56 @@ GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_SERVICE_ACCOUNT_FILE", "service-
 EMBED_MODEL = "text-embedding-3-small"
 SIMILARITY_THRESHOLD = 0.75
 TOP_K = 3
-GPT_MODEL = "gpt-4o"
-MAX_TOKENS = 1500  # Increased for comprehensive responses, especially with context
-TEMPERATURE = 0.8  # Higher creativity for natural conversations and hotkey handling
-TOP_P = 1.0  # Full nucleus sampling for maximum natural language variety
-PRESENCE_PENALTY = 0.3  # Reduced to allow natural topic continuation
-FREQUENCY_PENALTY = 0.1  # Slight penalty to avoid repetitive phrasing
+GPT_MODEL = "gpt-4o-2024-08-06"  # Latest model with Structured Outputs support (50% cheaper inputs, 33% cheaper outputs)
+MAX_TOKENS = 2000  # Increased for comprehensive responses with structured outputs and context
+TEMPERATURE = 0.9  # Higher creativity for natural conversations - GPT-4o handles higher temps better
+TOP_P = 0.95  # Slight restriction for more focused responses while maintaining variety
+PRESENCE_PENALTY = 0.2  # Reduced for natural topic continuation and conversation flow
+FREQUENCY_PENALTY = 0.05  # Minimal penalty - let GPT's natural variety shine through
+
+# Structured Outputs Configuration (GPT-4o-2024-08-06)
+ENABLE_STRUCTURED_OUTPUTS = True  # Enable 100% reliable JSON schema following
+STRUCTURED_OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "response": {
+            "type": "string",
+            "description": "The main conversational response content in natural language"
+        },
+        "language": {
+            "type": "string", 
+            "enum": ["chinese", "english", "mixed"],
+            "description": "Detected language of the user's input for consistency tracking"
+        },
+        "conversation_context": {
+            "type": "string",
+            "enum": ["new_query", "hotkey_continuation", "follow_up", "clarification"],
+            "description": "Type of conversational interaction"
+        },
+        "hotkey_suggestions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "key": {"type": "string", "maxLength": 1},
+                    "emoji": {"type": "string", "maxLength": 2},
+                    "description": {"type": "string", "maxLength": 50}
+                },
+                "required": ["key", "emoji", "description"],
+                "additionalProperties": false
+            },
+            "maxItems": 7,
+            "description": "Contextual hotkey suggestions for user engagement"
+        },
+        "confidence_level": {
+            "type": "string",
+            "enum": ["high", "medium", "low"],
+            "description": "Confidence in the response accuracy based on available context"
+        }
+    },
+    "required": ["response", "language", "conversation_context", "confidence_level"],
+    "additionalProperties": false
+}
 
 # Performance Optimization Settings
 REQUEST_TIMEOUT = 30  # Timeout for API requests

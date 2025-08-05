@@ -10,7 +10,8 @@ import tiktoken
 from openai import OpenAI
 from config import (ENHANCED_INSURANCE_CONFIG, SYSTEM_PROMPTS, GPT_MODEL, MAX_TOKENS, TEMPERATURE, EMBED_MODEL,
                    CLAIR_SYSTEM_PROMPT_ACTIVE, CONVERSATION_MEMORY_ENABLED, INTERNET_ACCESS_ENABLED, MAX_CONVERSATION_HISTORY,
-                   TOP_P, PRESENCE_PENALTY, FREQUENCY_PENALTY, REQUEST_TIMEOUT)
+                   TOP_P, PRESENCE_PENALTY, FREQUENCY_PENALTY, REQUEST_TIMEOUT, 
+                   ENABLE_STRUCTURED_OUTPUTS, STRUCTURED_OUTPUT_SCHEMA)
 from core import log_debug, track_function_entry
 
 def get_openai_client():
@@ -771,24 +772,72 @@ Note: Limited current information available. Please provide expert guidance base
         
         messages.append({"role": "user", "content": user_message})
         
-        # 4. Generate response using optimal GPT-like parameters
+        # 4. Generate response using GPT-Native parameters with Structured Outputs
         try:
             client = get_openai_client()
             if not client:
                 raise Exception("OpenAI client not available")
-            response = client.chat.completions.create(
-                model=GPT_MODEL,
-                messages=messages,
-                max_tokens=MAX_TOKENS,
-                temperature=TEMPERATURE,
-                top_p=TOP_P,
-                presence_penalty=PRESENCE_PENALTY,
-                frequency_penalty=FREQUENCY_PENALTY,
-                stream=False,
-                timeout=REQUEST_TIMEOUT
-            )
             
-            answer = response.choices[0].message.content
+            # Configure Structured Outputs for 100% reliability (GPT-4o-2024-08-06)
+            if ENABLE_STRUCTURED_OUTPUTS:
+                response = client.chat.completions.create(
+                    model=GPT_MODEL,
+                    messages=messages,
+                    max_tokens=MAX_TOKENS,
+                    temperature=TEMPERATURE,
+                    top_p=TOP_P,
+                    presence_penalty=PRESENCE_PENALTY,
+                    frequency_penalty=FREQUENCY_PENALTY,
+                    response_format={
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "clair_response",
+                            "schema": STRUCTURED_OUTPUT_SCHEMA,
+                            "strict": True
+                        }
+                    },
+                    stream=False,
+                    timeout=REQUEST_TIMEOUT
+                )
+                
+                # Parse structured response with error handling
+                import json
+                try:
+                    structured_response = json.loads(response.choices[0].message.content)
+                    answer = structured_response.get("response", response.choices[0].message.content)
+                    response_metadata = {
+                        "language": structured_response.get("language", "unknown"),
+                        "conversation_context": structured_response.get("conversation_context", "new_query"),
+                        "hotkey_suggestions": structured_response.get("hotkey_suggestions", []),
+                        "confidence_level": structured_response.get("confidence_level", "medium"),
+                        "structured_parsing_success": True
+                    }
+                except (json.JSONDecodeError, KeyError) as e:
+                    log_debug("Structured output parsing failed, using raw response", {"error": str(e)})
+                    answer = response.choices[0].message.content
+                    response_metadata = {
+                        "language": "unknown",
+                        "conversation_context": "new_query", 
+                        "hotkey_suggestions": [],
+                        "confidence_level": "medium",
+                        "structured_parsing_success": False,
+                        "parsing_error": str(e)
+                    }
+            else:
+                # Fallback to regular completion
+                response = client.chat.completions.create(
+                    model=GPT_MODEL,
+                    messages=messages,
+                    max_tokens=MAX_TOKENS,
+                    temperature=TEMPERATURE,
+                    top_p=TOP_P,
+                    presence_penalty=PRESENCE_PENALTY,
+                    frequency_penalty=FREQUENCY_PENALTY,
+                    stream=False,
+                    timeout=REQUEST_TIMEOUT
+                )
+                answer = response.choices[0].message.content
+                response_metadata = {}
             
             # 5. Save conversation for natural flow (GPT-Native memory)
             if CONVERSATION_MEMORY_ENABLED:
@@ -797,7 +846,7 @@ Note: Limited current information available. Please provide expert guidance base
             # 6. GPT-NATIVE RESPONSE - No post-processing interference
             # Let GPT handle all intelligence naturally through system prompt
             
-            # 7. Return clean, GPT-native result
+            # 7. Return clean, GPT-native result with structured metadata
             result = {
                 "answer": answer,
                 "query": query,
@@ -809,8 +858,10 @@ Note: Limited current information available. Please provide expert guidance base
                     "pure_gpt_response": True,
                     "no_post_processing": True,
                     "natural_conversation": True,
-                    "system_prompt_intelligence": True
+                    "system_prompt_intelligence": True,
+                    "structured_outputs_enabled": ENABLE_STRUCTURED_OUTPUTS
                 },
+                "structured_metadata": response_metadata,
                 "token_usage": {
                     "prompt_tokens": response.usage.prompt_tokens,
                     "completion_tokens": response.usage.completion_tokens,
