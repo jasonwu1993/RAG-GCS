@@ -56,66 +56,36 @@ VOICE_CONFIG = {
 }
 
 # Structured Outputs Configuration (GPT-4o-2024-08-06)
-ENABLE_STRUCTURED_OUTPUTS = True  # HYBRID: Structured data for systems, natural responses for users
+ENABLE_STRUCTURED_OUTPUTS = False  # Temporarily disabled - working on full ChatGPT-style implementation
+# ChatGPT-Style Structured Response Schema (Simplified but Extensible)
 STRUCTURED_OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
-        "response": {
+        "message": {
             "type": "string",
-            "description": "The main conversational response content in natural language"
+            "description": "The main conversational response in natural language"
         },
         "language": {
             "type": "string",
-            "description": "Detected language of the user's input (chinese, english, or mixed)"
+            "description": "Detected language (chinese, english, mixed)"
         },
-        "confidence_level": {
-            "type": "string", 
-            "description": "Confidence in the response accuracy (high, medium, or low)"
-        },
-        "conversation_context": {
-            "type": "string",
-            "description": "Type of interaction (new_query, hotkey_continuation, follow_up, clarification)"
-        },
-        "hotkey_suggestions": {
+        "suggestions": {
             "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "key": {"type": "string"},
-                    "emoji": {"type": "string"},
-                    "description": {"type": "string"}
-                },
-                "required": ["key", "emoji", "description"],
-                "additionalProperties": False
-            },
-            "description": "Contextual hotkey suggestions for user engagement"
+            "items": {"type": "string"},
+            "description": "Hotkey suggestions like 'A: Continue details', 'R: Recommend plans'"
         },
-        "multimedia_content": {
+        "interactive": {
             "type": "object",
             "properties": {
-                "images": {"type": "array", "items": {"type": "string"}},
-                "documents": {"type": "array", "items": {"type": "string"}},
-                "forms": {"type": "array", "items": {"type": "object"}},
-                "charts": {"type": "array", "items": {"type": "object"}}
+                "forms": {"type": "array", "items": {"type": "string"}},
+                "calculators": {"type": "array", "items": {"type": "string"}},
+                "charts": {"type": "array", "items": {"type": "string"}},
+                "comparisons": {"type": "array", "items": {"type": "string"}}
             },
-            "description": "Multimedia and interactive content suggestions"
-        },
-        "action_items": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "type": {"type": "string"},
-                    "title": {"type": "string"},
-                    "data": {"type": "object"}
-                },
-                "required": ["type", "title"],
-                "additionalProperties": False
-            },
-            "description": "Interactive actions like forms, calculators, comparisons"
+            "description": "Interactive elements available for this response"
         }
     },
-    "required": ["response", "language", "confidence_level"],
+    "required": ["message", "language"],
     "additionalProperties": False
 }
 
