@@ -11,8 +11,88 @@ from openai import OpenAI
 from config import (ENHANCED_INSURANCE_CONFIG, SYSTEM_PROMPTS, GPT_MODEL, MAX_TOKENS, TEMPERATURE, EMBED_MODEL,
                    CLAIR_SYSTEM_PROMPT_ACTIVE, CONVERSATION_MEMORY_ENABLED, INTERNET_ACCESS_ENABLED, MAX_CONVERSATION_HISTORY,
                    TOP_P, PRESENCE_PENALTY, FREQUENCY_PENALTY, REQUEST_TIMEOUT, 
-                   ENABLE_STRUCTURED_OUTPUTS, STRUCTURED_OUTPUT_SCHEMA)
+                   ENABLE_STRUCTURED_OUTPUTS, STRUCTURED_OUTPUT_SCHEMA,
+                   ENABLE_AGENTIC_PATTERNS, REFLECTION_ENABLED, PLANNING_ENABLED, TOOL_USE_ENABLED,
+                   ENABLE_CONTEXT_SYNTHESIS, ENABLE_PERFORMANCE_ANALYTICS)
 from core import log_debug, track_function_entry
+
+class PerformanceAnalytics:
+    """Advanced performance analytics for GPT-Native architecture"""
+    
+    def __init__(self):
+        self.metrics = {
+            "language_consistency": [],
+            "conversation_continuity": [],
+            "response_quality": [],
+            "agentic_effectiveness": [],
+            "structured_output_success": []
+        }
+    
+    def track_language_consistency(self, user_language: str, response_language: str, session_id: str):
+        """Track language consistency across conversation"""
+        consistent = user_language == response_language
+        self.metrics["language_consistency"].append({
+            "timestamp": datetime.utcnow(),
+            "session_id": session_id,
+            "user_language": user_language,
+            "response_language": response_language,
+            "consistent": consistent
+        })
+        
+        log_debug("Language consistency tracked", {
+            "consistent": consistent,
+            "user_lang": user_language,
+            "response_lang": response_language
+        })
+    
+    def track_conversation_continuity(self, context_type: str, session_id: str, quality_score: float):
+        """Track conversation flow and continuity"""
+        self.metrics["conversation_continuity"].append({
+            "timestamp": datetime.utcnow(),
+            "session_id": session_id,
+            "context_type": context_type,
+            "quality_score": quality_score
+        })
+    
+    def track_agentic_effectiveness(self, reflection_quality: int, planning_depth: int, tool_relevance: int):
+        """Track effectiveness of agentic patterns"""
+        self.metrics["agentic_effectiveness"].append({
+            "timestamp": datetime.utcnow(),
+            "reflection_quality": reflection_quality,
+            "planning_depth": planning_depth,
+            "tool_relevance": tool_relevance,
+            "overall_score": (reflection_quality + planning_depth + tool_relevance) / 3
+        })
+    
+    def get_performance_summary(self) -> Dict[str, Any]:
+        """Get comprehensive performance summary"""
+        return {
+            "language_consistency_rate": self._calculate_consistency_rate(),
+            "average_conversation_quality": self._calculate_avg_conversation_quality(),
+            "agentic_effectiveness_score": self._calculate_agentic_score(),
+            "total_interactions": sum(len(metrics) for metrics in self.metrics.values())
+        }
+    
+    def _calculate_consistency_rate(self) -> float:
+        if not self.metrics["language_consistency"]:
+            return 0.0
+        consistent_count = sum(1 for m in self.metrics["language_consistency"] if m["consistent"])
+        return consistent_count / len(self.metrics["language_consistency"])
+    
+    def _calculate_avg_conversation_quality(self) -> float:
+        if not self.metrics["conversation_continuity"]:
+            return 0.0
+        total_score = sum(m["quality_score"] for m in self.metrics["conversation_continuity"])
+        return total_score / len(self.metrics["conversation_continuity"])
+    
+    def _calculate_agentic_score(self) -> float:
+        if not self.metrics["agentic_effectiveness"]:
+            return 0.0
+        total_score = sum(m["overall_score"] for m in self.metrics["agentic_effectiveness"])
+        return total_score / len(self.metrics["agentic_effectiveness"])
+
+# Global performance analytics instance
+performance_analytics = PerformanceAnalytics() if ENABLE_PERFORMANCE_ANALYTICS else None
 
 def get_openai_client():
     """Get OpenAI client dynamically to avoid import-time dependency issues"""
@@ -442,6 +522,42 @@ class IntelligentAIService:
         # Initialize hotkey handler - DISABLED to let GPT handle hotkeys with full context
         self.hotkey_handler_enabled = False  # Was: hotkey_handler_available
     
+    def _detect_user_language(self, text: str) -> str:
+        """Simple language detection for analytics"""
+        import re
+        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', text))
+        total_chars = len(text.replace(" ", ""))
+        
+        if total_chars == 0:
+            return "unknown"
+        elif chinese_chars / total_chars > 0.3:
+            return "chinese"
+        else:
+            return "english"
+    
+    def _calculate_response_quality(self, structured_response: Dict[str, Any]) -> float:
+        """Calculate response quality score for analytics"""
+        quality_score = 0.5  # Base score
+        
+        # Confidence level contribution
+        confidence = structured_response.get("confidence_level", "medium")
+        if confidence == "high":
+            quality_score += 0.3
+        elif confidence == "low":
+            quality_score -= 0.2
+        
+        # Agentic metadata contribution
+        agentic_data = structured_response.get("agentic_metadata", {})
+        if agentic_data:
+            if agentic_data.get("reflection_notes"):
+                quality_score += 0.1
+            if agentic_data.get("planning_steps"):
+                quality_score += 0.1
+            if agentic_data.get("tool_recommendations"):
+                quality_score += 0.1
+        
+        return min(quality_score, 1.0)
+    
     def _detect_english_simple(self, text: str) -> bool:
         """Simple English detection for hotkey language preference"""
         import re
@@ -805,13 +921,37 @@ Note: Limited current information available. Please provide expert guidance base
                 try:
                     structured_response = json.loads(response.choices[0].message.content)
                     answer = structured_response.get("response", response.choices[0].message.content)
+                    
+                    # Extract agentic metadata if available
+                    agentic_data = structured_response.get("agentic_metadata", {})
+                    
                     response_metadata = {
                         "language": structured_response.get("language", "unknown"),
                         "conversation_context": structured_response.get("conversation_context", "new_query"),
                         "hotkey_suggestions": structured_response.get("hotkey_suggestions", []),
                         "confidence_level": structured_response.get("confidence_level", "medium"),
-                        "structured_parsing_success": True
+                        "structured_parsing_success": True,
+                        "agentic_metadata": agentic_data
                     }
+                    
+                    # Track performance analytics if enabled
+                    if performance_analytics and ENABLE_PERFORMANCE_ANALYTICS:
+                        # Language consistency tracking
+                        user_lang = self._detect_user_language(query)
+                        response_lang = structured_response.get("language", "unknown")
+                        performance_analytics.track_language_consistency(user_lang, response_lang, session_id)
+                        
+                        # Conversation continuity tracking
+                        context_type = structured_response.get("conversation_context", "new_query")
+                        quality_score = self._calculate_response_quality(structured_response)
+                        performance_analytics.track_conversation_continuity(context_type, session_id, quality_score)
+                        
+                        # Agentic effectiveness tracking
+                        if agentic_data:
+                            reflection_quality = len(agentic_data.get("reflection_notes", "")) // 20  # Rough quality metric
+                            planning_depth = len(agentic_data.get("planning_steps", []))
+                            tool_relevance = len(agentic_data.get("tool_recommendations", []))
+                            performance_analytics.track_agentic_effectiveness(reflection_quality, planning_depth, tool_relevance)
                 except (json.JSONDecodeError, KeyError) as e:
                     log_debug("Structured output parsing failed, using raw response", {"error": str(e)})
                     answer = response.choices[0].message.content

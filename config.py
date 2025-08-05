@@ -24,6 +24,37 @@ TOP_P = 0.95  # Slight restriction for more focused responses while maintaining 
 PRESENCE_PENALTY = 0.2  # Reduced for natural topic continuation and conversation flow
 FREQUENCY_PENALTY = 0.05  # Minimal penalty - let GPT's natural variety shine through
 
+# Agentic Design Patterns Configuration (2024-2025)
+ENABLE_AGENTIC_PATTERNS = True  # Enable reflection, planning, and tool use
+REFLECTION_ENABLED = True  # Enable self-reflection and response improvement
+PLANNING_ENABLED = True  # Enable multi-step planning for complex queries
+TOOL_USE_ENABLED = True  # Enable intelligent tool selection and usage
+
+# Advanced Capabilities Configuration
+ENABLE_MULTI_MODAL = False  # Prepare for voice, image, document processing (future)
+ENABLE_CONTEXT_SYNTHESIS = True  # Dynamic context relevance and summarization
+ENABLE_PERFORMANCE_ANALYTICS = True  # Real-time quality monitoring
+
+# Multi-Modal Configuration (Future-Ready)
+SUPPORTED_MODALITIES = {
+    "text": True,   # Current primary modality
+    "voice": False, # GPT-4o voice capabilities (232ms response time)
+    "image": False, # GPT-4o vision capabilities
+    "video": False, # GPT-4o video processing
+    "document": False  # Enhanced document processing
+}
+
+# Voice Configuration (GPT-4o Realtime API Ready)
+VOICE_CONFIG = {
+    "model": "gpt-4o-realtime-preview",
+    "voice": "alloy",  # alloy, echo, fable, onyx, nova, shimmer
+    "response_format": "audio",
+    "speed": 1.0,
+    "audio_format": "pcm16",  # PCM 16-bit, G.711 a-law, G.711 u-law
+    "vad_enabled": True,  # Voice Activity Detection
+    "interruption_handling": True
+}
+
 # Structured Outputs Configuration (GPT-4o-2024-08-06)
 ENABLE_STRUCTURED_OUTPUTS = True  # Enable 100% reliable JSON schema following
 STRUCTURED_OUTPUT_SCHEMA = {
@@ -62,6 +93,30 @@ STRUCTURED_OUTPUT_SCHEMA = {
             "type": "string",
             "enum": ["high", "medium", "low"],
             "description": "Confidence in the response accuracy based on available context"
+        },
+        "agentic_metadata": {
+            "type": "object",
+            "properties": {
+                "reflection_notes": {
+                    "type": "string",
+                    "description": "Self-reflection on response quality and potential improvements"
+                },
+                "planning_steps": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Multi-step planning for complex queries"
+                },
+                "tool_recommendations": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Recommended tools or actions for follow-up"
+                },
+                "context_synthesis": {
+                    "type": "string",
+                    "description": "Dynamic context relevance assessment"
+                }
+            },
+            "additionalProperties": false
         }
     },
     "required": ["response", "language", "conversation_context", "confidence_level"],
