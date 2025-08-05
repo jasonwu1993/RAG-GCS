@@ -56,7 +56,7 @@ VOICE_CONFIG = {
 }
 
 # Structured Outputs Configuration (GPT-4o-2024-08-06)
-ENABLE_STRUCTURED_OUTPUTS = True  # Re-enabled with simplified schema
+ENABLE_STRUCTURED_OUTPUTS = True  # API handles structured format, prompt provides natural responses
 STRUCTURED_OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
