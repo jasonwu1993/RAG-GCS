@@ -166,7 +166,7 @@ async def enhanced_ask_question(request: Request):
             if len(query.strip()) <= 2 and query.strip().upper() in ['A', 'R', 'E', 'C', 'S', 'Y', 'L']:
                 # This is a hotkey - try to find the most recent active session
                 try:
-                    from ai_service import ai_service
+                    # Use global ai_service (already imported at module level)
                     if ai_service and hasattr(ai_service, 'conversation_manager'):
                         recent_sessions = ai_service.conversation_manager.get_recent_active_sessions(limit=5)
                         if recent_sessions:
