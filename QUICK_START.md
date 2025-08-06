@@ -46,6 +46,8 @@ HEALTH_CHECK="curl https://rag-gcs-718538538469.us-central1.run.app/health"
 
 ### 📋 ESSENTIAL ENVIRONMENT VARIABLES (ALWAYS REFERENCE THIS!)
 
+**⚠️ IMPORTANT**: .env files are for LOCAL DEVELOPMENT ONLY! Production MUST use Google Secret Manager for sensitive data like OpenAI API keys.
+
 ```bash
 # Google Cloud Configuration
 GCP_PROJECT_ID=rag-backend-467204        # Project ID (for deployments)
@@ -487,13 +489,13 @@ gcloud run deploy rag-gcs \
   --project rag-backend-467204 \
   --allow-unauthenticated \
   --cpu-boost \
-  --memory 2Gi \
+  --memory 4Gi \
   --timeout 1000 \
   --cpu 2 \
   --concurrency 10 \
   --max-instances 3 \
   --port 8080 \
-  --set-env-vars "OPENAI_API_KEY=$(gcloud secrets versions access latest --secret=openai-api-key --project=718538538469),GCP_PROJECT_ID=rag-backend-467204,GCS_BUCKET_NAME=rag-clair-2025,GOOGLE_DRIVE_FOLDER_ID=1pMiyyfk8hEoVVSsxMmRmobe6dmdm5sjI,DEPLOYED_INDEX_ID=rag_index_1753602198270,INDEX_ENDPOINT_ID=1251545498595098624, ENVIRONMENT=production,DEBUG=false,GPT_MODEL=gpt-4o,EMBED_MODEL=text-embedding-3-small,MAX_TOKENS=1000,TEMPERATURE=0.3,SIMILARITY_THRESHOLD=0.75,TOP_K=3, GCP_REGION=us-central1"
+  --set-env-vars "OPENAI_API_KEY=$(gcloud secrets versions access latest --secret=openai-api-key --project=718538538469),GCP_PROJECT_ID=rag-backend-467204,GCS_BUCKET_NAME=rag-clair-2025,GOOGLE_DRIVE_FOLDER_ID=1pMiyyfk8hEoVVSsxMmRmobe6dmdm5sjI,DEPLOYED_INDEX_ID=rag_index_1753602198270,INDEX_ENDPOINT_ID=1251545498595098624, ENVIRONMENT=production,DEBUG=false,GPT_MODEL=gpt-4o-2024-08-06,EMBED_MODEL=text-embedding-3-small,MAX_TOKENS=2000,TEMPERATURE=0.3,SIMILARITY_THRESHOLD=0.9,TOP_K=3, GCP_REGION=us-central1"
 
 
 ```
@@ -501,26 +503,32 @@ gcloud run deploy rag-gcs \
 #### Alternative: Docker Deploy
 ```bash
 # Build and push to Container Registry
-docker build -f infrastructure/docker/Dockerfile -t gcr.io/rag-backend-467204/clair-rag .
-docker push gcr.io/rag-backend-467204/clair-rag
+docker build -t gcr.io/rag-backend-467204/rag-gcs .
+docker push gcr.io/rag-backend-467204/rag-gcs
 
 # Deploy from image
-gcloud run deploy clair-rag \
-  --image gcr.io/rag-backend-467204/clair-rag \
+gcloud run deploy rag-gcs \
+  --image gcr.io/rag-backend-467204/rag-gcs \
   --platform managed \
-  --region us-central1
+  --region us-central1 \
+  --project rag-backend-467204
 ```
 
 ### Environment Variables (Production)
+
+**IMPORTANT**: Production uses Google Secret Manager exclusively. Never use .env files in production!
+
 ```bash
-# Core configuration
+# Core configuration (set via Cloud Run)
 GCP_PROJECT_ID=rag-backend-467204
 GCS_BUCKET_NAME=rag-clair-2025
 ENVIRONMENT=production
 PORT=8080
 
-# AI Services
+# OpenAI API Key (from Secret Manager only!)
 OPENAI_API_KEY=$(gcloud secrets versions access latest --secret=openai-api-key)
+
+# AI Services
 INDEX_ENDPOINT_ID=1251545498595098624
 DEPLOYED_INDEX_ID=rag_index_1753602198270
 

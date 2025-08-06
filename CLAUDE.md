@@ -2,16 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🚨 CRITICAL: Always Read QUICK_START.md First
+## 🚨 CRITICAL: Always Read CLAUDE_CONTEXT.md First
 
-**MANDATORY**: Before troubleshooting any complex issues, deployment problems, or when ultrathinking, always read `QUICK_START.md` which contains:
-- Deployment reliability solutions (resolved timeout issues)  
-- Project ID vs Project Number clarification (rag-backend-467204 vs 718538538469)
-- Essential environment variables and resource mapping
-- Production testing commands and success criteria
-- Critical context for preventing common confusion
+**MANDATORY**: Before troubleshooting any complex issues, deployment problems, or when ultrathinking, always read `CLAUDE_CONTEXT.md` which contains:
+- Essential project identifiers (Project ID: rag-backend-467204 vs Project Number: 718538538469)
+- Critical deployment commands and testing procedures
+- Environment configuration (.env for LOCAL ONLY, Secret Manager for production)
+- Common issues and their solutions
+- Success validation criteria
 
-**QUICK_START.md is the authoritative reference** for project configuration, deployment strategy, and troubleshooting guidance.
+**CLAUDE_CONTEXT.md is the focused reference** for Claude Code sessions. For comprehensive details, see QUICK_START.md.
 
 ## Development Commands
 
