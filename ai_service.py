@@ -671,18 +671,34 @@ class IntelligentAIService:
             # Intelligently determine language based on conversation history
             needs_chinese = False  # Default to English unless Chinese context is found
             
-            # Check conversation history for language context
+            # Check conversation history for language context (BOTH user AND assistant messages)
             for msg in reversed(conversation_history[-8:]):  # Check last 4 exchanges
-                if msg.get("role") == "user":
-                    msg_content = msg.get("content", "")
-                    if len(msg_content.strip()) > 2:  # Ignore single letter hotkeys
-                        detected_lang = self._detect_user_language(msg_content)
-                        if detected_lang == "chinese":
-                            needs_chinese = True
-                            break
-                        elif detected_lang == "english":
-                            needs_chinese = False
-                            break
+                msg_role = msg.get("role", "")
+                msg_content = msg.get("content", "")
+                
+                # Check both user and assistant messages for language clues
+                if msg_role in ["user", "assistant"] and len(msg_content.strip()) > 2:
+                    # For user messages, ignore single letter hotkeys
+                    if msg_role == "user" and len(msg_content.strip()) <= 2:
+                        continue
+                    
+                    detected_lang = self._detect_user_language(msg_content)
+                    if detected_lang == "chinese":
+                        needs_chinese = True
+                        log_debug("Hotkey language detection: Chinese found", {
+                            "source": msg_role,
+                            "content_sample": msg_content[:50],
+                            "session_id": session_id
+                        })
+                        break
+                    elif detected_lang == "english":
+                        needs_chinese = False
+                        log_debug("Hotkey language detection: English found", {
+                            "source": msg_role, 
+                            "content_sample": msg_content[:50],
+                            "session_id": session_id
+                        })
+                        # Continue checking - Chinese takes priority if found later
             
             hotkey_response = hotkey_handler.get_hotkey_response(query, needs_chinese)
             
@@ -1085,9 +1101,17 @@ Note: Limited current information available. Please provide expert guidance base
                         if len(query.strip()) <= 2 and query.strip().upper() in ['A', 'R', 'E', 'C', 'S', 'Y', 'L']:
                             conversation_history = self.conversation_manager.get_conversation_context(session_id)
                             for msg in reversed(conversation_history[-8:]):
-                                if msg.get("role") == "user" and len(msg.get("content", "").strip()) > 2:
-                                    user_lang = self._detect_user_language(msg.get("content", ""))
-                                    break
+                                msg_role = msg.get("role", "")
+                                msg_content = msg.get("content", "")
+                                
+                                # Check both user and assistant messages
+                                if msg_role in ["user", "assistant"] and len(msg_content.strip()) > 2:
+                                    # Skip single letter user inputs
+                                    if msg_role == "user" and len(msg_content.strip()) <= 2:
+                                        continue
+                                    user_lang = self._detect_user_language(msg_content)
+                                    if user_lang == "chinese":  # Chinese takes priority
+                                        break
                         
                         performance_analytics.track_language_consistency(user_lang, response_lang, session_id)
                         
@@ -1190,28 +1214,36 @@ Note: Limited current information available. Please provide expert guidance base
                     if CONVERSATION_MEMORY_ENABLED:
                         conversation_history = self.conversation_manager.get_conversation_context(session_id)
                     
-                    # Systematic language detection from conversation history
+                    # Systematic language detection from conversation history (BOTH user AND assistant messages)
                     for msg in reversed(conversation_history[-8:]):  # Check last 4 exchanges more thoroughly
-                        if msg.get("role") == "user":
-                            msg_content = msg.get("content", "")
-                            if len(msg_content.strip()) > 2:  # Ignore other hotkeys, focus on real queries
-                                hist_language = self._detect_user_language(msg_content)
-                                if hist_language == "chinese":
-                                    detected_language = "chinese"
-                                    log_debug("Enhanced hotkey language detection", {
-                                        "hotkey": query,
-                                        "detected_from_history": "chinese",
-                                        "history_sample": msg_content[:50]
-                                    })
-                                    break  # Chinese found, stop searching
-                                elif hist_language == "english":
-                                    detected_language = "english"
-                                    log_debug("Enhanced hotkey language detection", {
-                                        "hotkey": query,
-                                        "detected_from_history": "english", 
-                                        "history_sample": msg_content[:50]
-                                    })
-                                    # Continue searching in case there's Chinese context later
+                        msg_role = msg.get("role", "")
+                        msg_content = msg.get("content", "")
+                        
+                        # Check both user and assistant messages for language context
+                        if msg_role in ["user", "assistant"] and len(msg_content.strip()) > 2:
+                            # Skip single letter user inputs (other hotkeys)
+                            if msg_role == "user" and len(msg_content.strip()) <= 2:
+                                continue
+                                
+                            hist_language = self._detect_user_language(msg_content)
+                            if hist_language == "chinese":
+                                detected_language = "chinese"
+                                log_debug("Enhanced hotkey language detection", {
+                                    "hotkey": query,
+                                    "detected_from_history": "chinese",
+                                    "source_role": msg_role,
+                                    "history_sample": msg_content[:50]
+                                })
+                                break  # Chinese found, stop searching
+                            elif hist_language == "english":
+                                detected_language = "english"
+                                log_debug("Enhanced hotkey language detection", {
+                                    "hotkey": query,
+                                    "detected_from_history": "english",
+                                    "source_role": msg_role,
+                                    "history_sample": msg_content[:50]
+                                })
+                                # Continue searching in case there's Chinese context later
                 
                 if detected_language == "chinese":
                     contextual_hotkeys = [
