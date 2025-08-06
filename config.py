@@ -56,7 +56,7 @@ VOICE_CONFIG = {
 }
 
 # Structured Outputs Configuration (GPT-4o-2024-08-06)
-ENABLE_STRUCTURED_OUTPUTS = True  # ENABLED for GPT-native dynamic hotkey generation
+ENABLE_STRUCTURED_OUTPUTS = True  # ENABLED - schema validation fixed
 # ChatGPT-Style Structured Response Schema (Simplified but Extensible)
 STRUCTURED_OUTPUT_SCHEMA = {
     "type": "object",
@@ -93,12 +93,11 @@ STRUCTURED_OUTPUT_SCHEMA = {
                 "tool_recommendations": {"type": "array", "items": {"type": "string"}},
                 "context_synthesis": {"type": "string"}
             },
-            "required": ["reflection_notes", "planning_steps", "tool_recommendations", "context_synthesis"],
-            "additionalProperties": False,
+            "additionalProperties": true,
             "description": "Advanced AI reasoning metadata"
         }
     },
-    "required": ["response", "language", "conversation_context"],
+    "required": ["response", "language", "conversation_context", "hotkey_suggestions", "confidence_level", "agentic_metadata"],
     "additionalProperties": False
 }
 

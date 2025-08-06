@@ -23,7 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # System identification - define early for fallback functions  
-VERSION = "6.4-CHAT-ENDPOINTS-CLAIR-AI"
+VERSION = "6.5-DYNAMIC-HOTKEYS-ENABLED"
 BUILD_DATE = "2025-08-04"
 
 # Import core components only - simplified for debugging
