@@ -112,29 +112,35 @@ print("📝 System prompt (first 100 chars):", CLAIR_SYSTEM_PROMPT_ACTIVE[:100] 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Enhanced lifespan management with service initialization"""
-    print("🔧 Initializing Enhanced RAG Clair System...")
+    """OPTIMIZED lifespan management - fast startup with background initialization"""
+    print("🚀 Fast startup: Enhanced RAG Clair System starting...")
     
-    # Initialize all services - with error handling
-    try:
-        initialization_results = initialize_all_services()
-    except Exception as e:
-        print(f"⚠️ Service initialization failed: {e}")
-        initialization_results = {"error": str(e), "services_initialized": False}
+    # OPTIMIZATION: Make initialization non-blocking to pass Cloud Run startup probes quickly
+    async def background_initialization():
+        """Initialize services in background after startup probe succeeds"""
+        print("🔧 Background initialization starting...")
+        try:
+            initialization_results = initialize_all_services()
+            print("📊 Background Service Initialization Results:")
+            for service, status in initialization_results.items():
+                status_icon = "✅" if status else "❌"
+                print(f"   {status_icon} {service}: {'OK' if status else 'FAILED'}")
+        except Exception as e:
+            print(f"⚠️ Background service initialization failed: {e}")
+        
+        # Start auto-sync loop if available
+        if 'auto_sync_loop' in globals():
+            print("🔄 Starting auto-sync background task...")
+            asyncio.create_task(auto_sync_loop())
+        else:
+            print("⚠️ Auto-sync not available - documents_router import failed")
+        
+        print("🎯 Background initialization complete!")
     
-    print("📊 Service Initialization Results:")
-    for service, status in initialization_results.items():
-        status_icon = "✅" if status else "❌"
-        print(f"   {status_icon} {service}: {'OK' if status else 'FAILED'}")
+    # Start background initialization but don't wait for it
+    asyncio.create_task(background_initialization())
     
-    # Start auto-sync loop if available
-    if 'auto_sync_loop' in globals():
-        print("🔄 Starting auto-sync background task...")
-        asyncio.create_task(auto_sync_loop())
-    else:
-        print("⚠️ Auto-sync not available - documents_router import failed")
-    
-    print("🎯 Enhanced RAG Clair System ready for requests!")
+    print("⚡ Enhanced RAG Clair System ready for requests! (Background init in progress)")
     yield
     
     print("🛑 Shutting down Enhanced RAG Clair System...")
