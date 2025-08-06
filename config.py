@@ -56,7 +56,7 @@ VOICE_CONFIG = {
 }
 
 # Structured Outputs Configuration (GPT-4o-2024-08-06)
-ENABLE_STRUCTURED_OUTPUTS = True  # Re-enabled for language consistency and hotkey intelligence
+ENABLE_STRUCTURED_OUTPUTS = False  # Temporarily disabled to isolate conversation issue
 # ChatGPT-Style Structured Response Schema (Simplified but Extensible)
 STRUCTURED_OUTPUT_SCHEMA = {
     "type": "object",
@@ -93,6 +93,8 @@ STRUCTURED_OUTPUT_SCHEMA = {
                 "tool_recommendations": {"type": "array", "items": {"type": "string"}},
                 "context_synthesis": {"type": "string"}
             },
+            "required": ["reflection_notes", "planning_steps", "tool_recommendations", "context_synthesis"],
+            "additionalProperties": False,
             "description": "Advanced AI reasoning metadata"
         }
     },
