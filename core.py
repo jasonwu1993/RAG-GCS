@@ -14,8 +14,26 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from config import *
 
-# Load environment variables
-load_dotenv()
+# SECURE ENVIRONMENT LOADING - CONDITIONAL BASED ON DEPLOYMENT
+# ================================================================
+# LOCAL DEVELOPMENT: Load from .env file (development only)
+# PRODUCTION (Cloud Run): Use Google Secret Manager (secure)
+# ================================================================
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")  # Set by Cloud Run deployment
+
+if ENVIRONMENT == "development":
+    # LOCAL DEVELOPMENT ONLY: Load .env file
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        print("🔧 [LOCAL] Loaded environment variables from .env file")
+    except Exception as e:
+        print(f"⚠️ [LOCAL] Failed to load .env file: {e}")
+else:
+    # PRODUCTION: Environment variables come from Google Secret Manager via Cloud Run
+    # No .env file loading - this is handled by Cloud Run deployment with secrets
+    print(f"🏭 [PRODUCTION] Using environment variables from Google Secret Manager")
+    print(f"🔐 [SECURITY] .env file loading disabled in production for security")
 
 # Temporary logging function to avoid circular dependencies during initialization
 def _temp_log_debug(message: str, data: Any = None):

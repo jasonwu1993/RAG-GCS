@@ -97,13 +97,29 @@ performance_analytics = PerformanceAnalytics() if ENABLE_PERFORMANCE_ANALYTICS e
 def get_openai_client():
     """Get OpenAI client dynamically to avoid import-time dependency issues"""
     try:
+        # First try to get from core (preferred method)
         from core import openai_client
-        if openai_client is None:
-            # Try to initialize if not done yet
-            from core import initialize_openai_client
-            initialize_openai_client()
+        if openai_client is not None:
+            return openai_client
+            
+        # Try to initialize via core
+        from core import initialize_openai_client
+        if initialize_openai_client():
             from core import openai_client
-        return openai_client
+            return openai_client
+        
+        # Fallback: Create OpenAI client directly if core initialization fails
+        # This ensures production deployments work with proper secret manager configuration
+        log_debug("Core OpenAI client unavailable, creating direct client")
+        import os
+        if os.getenv("OPENAI_API_KEY"):
+            direct_client = OpenAI()
+            log_debug("Direct OpenAI client created successfully")
+            return direct_client
+        else:
+            log_debug("No OpenAI API key available")
+            return None
+            
     except Exception as e:
         log_debug("Failed to get OpenAI client", {"error": str(e)})
         return None

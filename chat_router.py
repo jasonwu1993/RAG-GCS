@@ -198,6 +198,11 @@ async def enhanced_ask_question(request: Request):
             "has_filters": bool(filters)
         })
         
+        # Check if AI service is available before using
+        if not ai_service_available or ai_service is None:
+            log_debug("AI service not available", {"ai_service_available": ai_service_available, "ai_service": ai_service})
+            raise Exception("AI service not initialized - check ai_service.py imports and initialization")
+        
         # Use Ultra-intelligent AI service for response generation with multi-source routing
         ai_result = await ai_service.process_query_with_ultra_intelligence(
             query=query, 

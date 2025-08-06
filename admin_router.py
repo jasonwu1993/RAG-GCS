@@ -7,6 +7,8 @@ from datetime import datetime
 import threading
 import sys
 import os
+import json
+from dotenv import load_dotenv
 
 # Define fallback functions first
 def log_debug(msg, data=None): 
@@ -116,6 +118,84 @@ async def get_debug_info():
                 "status": "error_mode"
             }
         }
+
+@router.get("/debug_env")
+async def debug_environment_variables():
+    """Emergency diagnostic endpoint to check environment variables and OpenAI configuration"""
+    track_function_entry("debug_environment_variables")
+    
+    # SECURE ENVIRONMENT LOADING CHECK
+    # LOCAL DEVELOPMENT: Check .env loading
+    # PRODUCTION: Should NOT load .env (security requirement)
+    environment = os.getenv("ENVIRONMENT", "development")
+    dotenv_result = {"status": "unknown", "environment": environment}
+    
+    if environment == "development":
+        # LOCAL DEVELOPMENT ONLY: Try loading .env
+        try:
+            load_dotenv()
+            dotenv_result = {"status": "loaded_for_development", "environment": "development", "source": ".env_file"}
+        except Exception as e:
+            dotenv_result = {"status": f"failed: {str(e)}", "environment": "development", "source": ".env_file"}
+    else:
+        # PRODUCTION: Should use Google Secret Manager only
+        dotenv_result = {"status": "disabled_for_security", "environment": "production", "source": "google_secret_manager"}
+
+    # Check critical environment variables
+    env_vars = {
+        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
+        "ENVIRONMENT": os.getenv("ENVIRONMENT"),
+        "GPT_MODEL": os.getenv("GPT_MODEL"),
+        "GCP_PROJECT_ID": os.getenv("GCP_PROJECT_ID"),
+        "MAX_TOKENS": os.getenv("MAX_TOKENS"),
+        "TEMPERATURE": os.getenv("TEMPERATURE")
+    }
+    
+    env_status = {}
+    for key, value in env_vars.items():
+        if key == "OPENAI_API_KEY" and value:
+            env_status[key] = {
+                "set": True,
+                "length": len(value),
+                "preview": f"{value[:15]}..." if len(value) > 15 else value
+            }
+        elif value:
+            env_status[key] = {"set": True, "value": value}
+        else:
+            env_status[key] = {"set": False, "value": None}
+
+    # Test OpenAI client
+    openai_test = {"status": "unknown", "error": None, "response": None}
+    try:
+        from openai import OpenAI
+        client = OpenAI()
+        openai_test["client_created"] = True
+        
+        # Try a simple API call
+        response = client.chat.completions.create(
+            model="gpt-4o-2024-08-06",
+            messages=[{"role": "user", "content": "Test"}],
+            max_tokens=10
+        )
+        openai_test["status"] = "success"
+        openai_test["response"] = response.choices[0].message.content
+        
+    except Exception as e:
+        openai_test["status"] = "failed"
+        openai_test["error"] = str(e)
+        openai_test["client_created"] = False
+    
+    return {
+        "timestamp": datetime.utcnow().isoformat(),
+        "dotenv_loading": dotenv_result,
+        "environment_variables": env_status,
+        "openai_test": openai_test,
+        "system_info": {
+            "python_version": sys.version,
+            "working_directory": os.getcwd(),
+            "environment_type": "production" if os.getenv("ENVIRONMENT") == "production" else "development"
+        }
+    }
 
 @router.get("/debug_live")
 async def get_live_debug_data():
