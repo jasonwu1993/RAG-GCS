@@ -1,5 +1,148 @@
 # Clair RAG Quick Start Guide
 
+## 🚨 CRITICAL CONTEXT FOR ALL CLAUDE CODE SESSIONS
+
+**IMPORTANT: This section contains essential information that ALL Claude Code sessions must read when troubleshooting, especially during ultrathinking and complex problem-solving.**
+
+### 🚀 DEPLOYMENT RELIABILITY STATUS: ✅ RESOLVED
+
+**Root Cause**: Cloud Run startup probe failures during heavy service initialization  
+**Solution**: Background initialization pattern implemented in `main_modular.py`
+
+#### Current Status
+- ✅ **Background initialization implemented** - heavy services load after startup probe succeeds
+- ✅ **Cloud Run startup probes pass quickly** - no more container exit(1) errors  
+- ✅ **Deployments complete successfully** even if gcloud reports timeout
+- ✅ **Language consistency fully restored** in production
+- ✅ **ai_service errors completely resolved** with lazy initialization
+
+#### Deployment Strategy (NO MORE RANDOM WAITING!)
+1. Use standard `gcloud run deploy` commands
+2. **Ignore timeout messages** - deployment continues in background  
+3. Check `gcloud run revisions list` for new revisions
+4. Route traffic manually if needed: `gcloud run services update-traffic`
+5. **Deployments work reliably now** - no more timeout anxiety
+
+### 🏗️ PROJECT ARCHITECTURE - CRITICAL CONTEXT
+
+#### The Project ID vs Project Number Confusion: ✅ RESOLVED
+```bash
+# SAME PROJECT - Different Identifiers (MEMORIZE THIS!)
+Project ID: rag-backend-467204          # Use for gcloud commands
+Project Number: 718538538469             # Used in service URLs
+```
+
+#### Essential URLs and Commands
+```bash
+# Production Service URL (uses project number in domain)  
+PRODUCTION_URL="https://rag-gcs-718538538469.us-central1.run.app"
+
+# Deploy using Project ID (NOT project number)
+DEPLOY_COMMAND="gcloud run deploy rag-gcs --source . --region us-central1 --project rag-backend-467204"
+
+# Test deployment
+HEALTH_CHECK="curl https://rag-gcs-718538538469.us-central1.run.app/health"
+```
+
+### 📋 ESSENTIAL ENVIRONMENT VARIABLES (ALWAYS REFERENCE THIS!)
+
+```bash
+# Google Cloud Configuration
+GCP_PROJECT_ID=rag-backend-467204        # Project ID (for deployments)
+GCP_REGION=us-central1                   # Region
+GCS_BUCKET_NAME=rag-clair-2025          # Storage bucket
+
+# Vertex AI Search Configuration  
+INDEX_ENDPOINT_ID=1251545498595098624    # Vector search endpoint
+DEPLOYED_INDEX_ID=rag_index_1753602198270 # Deployed index
+INDEX_ID=3923640229067489280             # Index ID
+
+# Google Drive Integration
+GOOGLE_DRIVE_FOLDER_ID=1pMiyyfk8hEoVVSsxMmRmobe6dmdm5sjI # Source folder
+GOOGLE_SERVICE_ACCOUNT_FILE=gcp-credentials.json          # Service account
+
+# Service Account
+SERVICE_ACCOUNT_EMAIL=rag-backend-runner@rag-backend-467204.iam.gserviceaccount.com
+```
+
+### 🎯 RESOURCE MAPPING (ALL IN SAME PROJECT!)
+
+```
+Project: rag-backend-467204 (ID) / 718538538469 (Number) 
+├── Cloud Run Service: rag-gcs
+│   ├── URL: https://rag-gcs-718538538469.us-central1.run.app  
+│   └── Deploy to: rag-backend-467204
+├── Vertex AI Search
+│   ├── Index Endpoint: 1251545498595098624  
+│   ├── Deployed Index: rag_index_1753602198270
+│   └── Index ID: 3923640229067489280
+├── Cloud Storage
+│   └── Bucket: rag-clair-2025
+├── Google Drive Integration  
+│   └── Folder: 1pMiyyfk8hEoVVSsxMmRmobe6dmdm5sjI
+└── Service Account
+    └── rag-backend-runner@rag-backend-467204.iam.gserviceaccount.com
+```
+
+### 🧪 PRODUCTION TESTING COMMANDS
+
+```bash
+# Health Check
+curl "https://rag-gcs-718538538469.us-central1.run.app/health"
+
+# Test Language Consistency (Chinese)
+curl -X POST "https://rag-gcs-718538538469.us-central1.run.app/chat/ask" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "您都代理哪些产品", "session_id": "test_session"}'
+
+# Test Hotkey Language Consistency  
+curl -X POST "https://rag-gcs-718538538469.us-central1.run.app/chat/ask" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "R", "session_id": "test_session"}'
+```
+
+### 🔧 DEPLOYMENT COMMANDS (RELIABLE)
+
+```bash
+# Standard Deployment (WORKS RELIABLY NOW)
+gcloud run deploy rag-gcs \
+  --source . \
+  --region us-central1 \
+  --project rag-backend-467204 \
+  --allow-unauthenticated
+
+# Check Deployment Status (if timeout reported)
+gcloud run revisions list --service=rag-gcs --region=us-central1 --project=rag-backend-467204 --limit=5
+
+# Route Traffic to Latest Revision (if needed)
+LATEST_REVISION=$(gcloud run revisions list --service=rag-gcs --region=us-central1 --project=rag-backend-467204 --limit=1 --format="value(REVISION)")
+gcloud run services update-traffic rag-gcs --to-revisions=$LATEST_REVISION=100 --region=us-central1 --project=rag-backend-467204
+```
+
+### 🎯 SUCCESS CRITERIA (VALIDATION CHECKLIST)
+
+#### Deployment Success
+- ✅ New revision created (check revision list)
+- ✅ Revision status: Ready (not just Active)  
+- ✅ Health endpoint responds 200
+- ✅ AI service responds without "technical difficulties"
+
+#### Language Consistency Success  
+- ✅ Chinese queries return Chinese responses
+- ✅ Hotkeys maintain conversation language
+- ✅ Hotkey suggestions in correct language
+- ✅ No English mixing in Chinese responses
+
+### 🚨 REMEMBER FOR ALL CLAUDE SESSIONS
+
+1. **Project Confusion**: Use Project ID `rag-backend-467204` for gcloud commands, Service URL uses project number `718538538469`
+2. **Deployment Timeouts**: Ignore timeout messages, check revision list instead
+3. **Language Consistency**: Test with Chinese query + hotkey "R" to validate
+4. **Production URL**: Always use `https://rag-gcs-718538538469.us-central1.run.app` for testing
+5. **All Resources**: Same project, different identifiers - no resource splitting
+
+---
+
 ## 🚨 UPDATED DIRECTORY STRUCTURE 
 
 **NEW CLEAN ENTERPRISE STRUCTURE:**
