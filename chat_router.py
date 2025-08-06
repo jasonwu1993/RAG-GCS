@@ -159,8 +159,44 @@ async def enhanced_ask_question(request: Request):
         # Prepare context for AI processing
         context = "\n\n---\n\n".join(relevant_chunks) if relevant_chunks else ""
         
-        # Extract session ID for conversation awareness
-        session_id = data.get("session_id", f"session_{int(datetime.utcnow().timestamp())}")
+        # Extract session ID for conversation awareness - ensure consistency
+        session_id = data.get("session_id")
+        if not session_id:
+            # For hotkey queries, try to find existing session with recent activity
+            if len(query.strip()) <= 2 and query.strip().upper() in ['A', 'R', 'E', 'C', 'S', 'Y', 'L']:
+                # This is a hotkey - try to find the most recent active session
+                try:
+                    from ai_service import ai_service
+                    recent_sessions = ai_service.conversation_manager.get_recent_active_sessions(limit=5)
+                    if recent_sessions:
+                        session_id = recent_sessions[0]  # Use most recent session
+                        log_debug("Hotkey without session_id - using most recent session", {
+                            "hotkey": query,
+                            "recovered_session_id": session_id,
+                            "recent_sessions": recent_sessions
+                        })
+                    else:
+                        session_id = f"web_session_{int(datetime.utcnow().timestamp())}"
+                        log_debug("Hotkey without session_id - no recent sessions found", {
+                            "hotkey": query,
+                            "new_session_id": session_id
+                        })
+                except Exception as e:
+                    session_id = f"web_session_{int(datetime.utcnow().timestamp())}"
+                    log_debug("Error recovering session for hotkey", {"error": str(e)})
+            else:
+                # Regular query - create new session
+                session_id = f"web_session_{int(datetime.utcnow().timestamp())}"
+                log_debug("No session_id provided, created new one", {
+                    "new_session_id": session_id,
+                    "query": query[:50]
+                })
+        
+        log_debug("Processing chat request", {
+            "session_id": session_id,
+            "query": query[:100],
+            "has_filters": bool(filters)
+        })
         
         # Use Ultra-intelligent AI service for response generation with multi-source routing
         ai_result = await ai_service.process_query_with_ultra_intelligence(
@@ -174,7 +210,8 @@ async def enhanced_ask_question(request: Request):
         # Ultra-intelligent response format with multi-source metadata
         response = {
             "answer": ai_result["answer"],
-            "session_id": session_id,
+            "session_id": session_id,  # CRITICAL: Return session_id to frontend for consistency
+            "session_management_note": "Please include this session_id in your next request to maintain conversation context",
             "context_used": bool(context.strip()),
             "conversation_aware": ai_result.get("conversation_aware", False),
             "ultra_intelligence_enabled": ai_result.get("ultra_intelligence_metadata", {}).get("multi_source_enabled", False),

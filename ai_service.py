@@ -181,6 +181,32 @@ class ConversationManager:
         if session_id in self.conversations:
             del self.conversations[session_id]
             log_debug("Cleared conversation", {"session_id": session_id})
+    
+    def get_recent_active_sessions(self, limit: int = 5) -> List[str]:
+        """Get recent active session IDs, sorted by most recent activity"""
+        from datetime import datetime, timedelta
+        
+        # Sort sessions by the length of conversation (more active = more messages)
+        # This is a simple heuristic - more sophisticated timestamp tracking could be added later
+        session_activity = []
+        
+        for session_id, messages in self.conversations.items():
+            if messages:  # Only include sessions with messages
+                activity_score = len(messages)  # Simple activity measure
+                session_activity.append((session_id, activity_score))
+        
+        # Sort by activity (most active first) and return session IDs
+        sorted_sessions = sorted(session_activity, key=lambda x: x[1], reverse=True)
+        recent_sessions = [session_id for session_id, _ in sorted_sessions[:limit]]
+        
+        log_debug("Retrieved recent active sessions", {
+            "total_sessions": len(self.conversations),
+            "active_sessions": len(session_activity), 
+            "returned_sessions": len(recent_sessions),
+            "recent_sessions": recent_sessions
+        })
+        
+        return recent_sessions
 
 class InternetSearchService:
     """Handles internet search for real-time information"""
@@ -663,10 +689,22 @@ class IntelligentAIService:
         
         # Check for hotkey input first (even if ultra-intelligence is disabled)
         if self.hotkey_handler_enabled and hotkey_handler.is_hotkey(query):
+            log_debug("HOTKEY DETECTED - Starting language analysis", {
+                "hotkey": query,
+                "session_id": session_id,
+                "handler_enabled": self.hotkey_handler_enabled
+            })
+            
             # Determine language preference
             conversation_history = []
             if CONVERSATION_MEMORY_ENABLED:
                 conversation_history = self.conversation_manager.get_conversation_context(session_id)
+            
+            log_debug("Conversation history retrieved", {
+                "session_id": session_id,
+                "history_length": len(conversation_history),
+                "recent_messages": [{"role": msg.get("role", ""), "content": msg.get("content", "")[:50]} for msg in conversation_history[-4:]]
+            })
             
             # Intelligently determine language based on conversation history
             needs_chinese = False  # Default to English unless Chinese context is found
@@ -685,10 +723,11 @@ class IntelligentAIService:
                     detected_lang = self._detect_user_language(msg_content)
                     if detected_lang == "chinese":
                         needs_chinese = True
-                        log_debug("Hotkey language detection: Chinese found", {
+                        log_debug("HOTKEY LANGUAGE: Chinese found - setting needs_chinese=True", {
                             "source": msg_role,
                             "content_sample": msg_content[:50],
-                            "session_id": session_id
+                            "session_id": session_id,
+                            "detected_language": detected_lang
                         })
                         break
                     elif detected_lang == "english":
@@ -699,6 +738,13 @@ class IntelligentAIService:
                             "session_id": session_id
                         })
                         # Continue checking - Chinese takes priority if found later
+            
+            log_debug("HOTKEY FINAL DECISION", {
+                "session_id": session_id,
+                "hotkey": query,
+                "needs_chinese": needs_chinese,
+                "will_use_chinese_response": needs_chinese
+            })
             
             hotkey_response = hotkey_handler.get_hotkey_response(query, needs_chinese)
             
