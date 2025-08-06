@@ -6,12 +6,25 @@ import os
 import json
 from dotenv import load_dotenv
 
-# Try loading .env (will fail in production, succeed locally)
-try:
-    load_dotenv()
-    print("✅ load_dotenv() succeeded")
-except Exception as e:
-    print(f"❌ load_dotenv() failed: {e}")
+# SECURE ENVIRONMENT LOADING - CONDITIONAL BASED ON DEPLOYMENT
+# =================================================================
+# LOCAL DEVELOPMENT: Load from .env file (development only)
+# PRODUCTION (Cloud Run): Use Google Secret Manager (secure)
+# =================================================================
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+print(f"🔧 Environment: {ENVIRONMENT}")
+
+if ENVIRONMENT == "development":
+    # LOCAL DEVELOPMENT ONLY: Load .env file
+    try:
+        load_dotenv()
+        print("📁 [LOCAL] Loaded environment variables from .env file")
+    except Exception as e:
+        print(f"⚠️ [LOCAL] Failed to load .env file: {e}")
+else:
+    # PRODUCTION: Environment variables come from Google Secret Manager via Cloud Run
+    print("🏭 [PRODUCTION] Using environment variables from Google Secret Manager")
+    print("🔐 [SECURITY] .env file loading disabled in production for security")
 
 # Check critical environment variables
 env_vars = {

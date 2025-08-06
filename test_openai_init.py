@@ -6,8 +6,14 @@ Test OpenAI Client Initialization
 import os
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
+# SECURE ENVIRONMENT LOADING - FOR TESTING
+# Local development testing only
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+if ENVIRONMENT == "development":
+    load_dotenv()
+    print("📁 [TEST] Loaded .env for local testing")
+else:
+    print("🏭 [TEST] Using production environment variables")
 
 print("🔍 Testing OpenAI Client Initialization")
 print("=" * 50)
