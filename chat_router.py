@@ -16,14 +16,14 @@ except ImportError as e:
     def track_function_entry(name): pass
     bucket = None
     index_endpoint = None
-# Safe imports for services
+# Safe imports for services with lazy loading
 try:
-    from ai_service import ai_service, embed_text
+    from ai_service import get_ai_service, embed_text
     ai_service_available = True
 except ImportError as e:
     print(f"⚠️ AI service import failed: {e}")
     ai_service_available = False
-    ai_service = None
+    def get_ai_service(): return None
     def embed_text(text): return []
 
 try:
@@ -166,9 +166,10 @@ async def enhanced_ask_question(request: Request):
             if len(query.strip()) <= 2 and query.strip().upper() in ['A', 'R', 'E', 'C', 'S', 'Y', 'L']:
                 # This is a hotkey - try to find the most recent active session
                 try:
-                    # Use global ai_service (already imported at module level)
-                    if ai_service and hasattr(ai_service, 'conversation_manager'):
-                        recent_sessions = ai_service.conversation_manager.get_recent_active_sessions(limit=5)
+                    # Use get_ai_service() directly to avoid scope issues
+                    service = get_ai_service()
+                    if service and hasattr(service, 'conversation_manager'):
+                        recent_sessions = service.conversation_manager.get_recent_active_sessions(limit=5)
                         if recent_sessions:
                             session_id = recent_sessions[0]  # Use most recent session
                             log_debug("Hotkey without session_id - using most recent session", {
@@ -206,12 +207,13 @@ async def enhanced_ask_question(request: Request):
         })
         
         # Check if AI service is available before using
-        if not ai_service_available or ai_service is None:
-            log_debug("AI service not available", {"ai_service_available": ai_service_available, "ai_service": ai_service})
+        service = get_ai_service()
+        if not ai_service_available or service is None:
+            log_debug("AI service not available", {"ai_service_available": ai_service_available, "service": service})
             raise Exception("AI service not initialized - check ai_service.py imports and initialization")
         
         # Use Ultra-intelligent AI service for response generation with multi-source routing
-        ai_result = await ai_service.process_query_with_ultra_intelligence(
+        ai_result = await service.process_query_with_ultra_intelligence(
             query=query, 
             context=context, 
             session_id=session_id,
@@ -286,10 +288,11 @@ async def clear_conversation(request: Request):
         if not session_id:
             raise HTTPException(status_code=400, detail="Session ID required")
         
-        if not ai_service_available or ai_service is None:
+        service = get_ai_service()
+        if not ai_service_available or service is None:
             raise HTTPException(status_code=503, detail="AI service not available")
             
-        ai_service.conversation_manager.clear_conversation(session_id)
+        service.conversation_manager.clear_conversation(session_id)
         
         return {
             "message": "Conversation history cleared",
@@ -309,10 +312,11 @@ async def get_conversation_status(session_id: str):
     track_function_entry("get_conversation_status")
     
     try:
-        if not ai_service_available or ai_service is None:
+        service = get_ai_service()
+        if not ai_service_available or service is None:
             raise HTTPException(status_code=503, detail="AI service not available")
             
-        conversation_history = ai_service.conversation_manager.get_conversation_context(session_id)
+        conversation_history = service.conversation_manager.get_conversation_context(session_id)
         
         return {
             "session_id": session_id,
@@ -396,9 +400,9 @@ async def get_chat_capabilities():
                 "similarity_threshold": SIMILARITY_THRESHOLD,
                 "max_results": TOP_K
             },
-            "supported_intents": list(ai_service.classifier.config["ADVANCED_INTENTS"].keys()) if ai_service_available and ai_service else [],
-            "supported_entities": list(ai_service.classifier.config["ENTITY_RECOGNITION"].keys()) if ai_service_available and ai_service else [],
-            "product_expertise": list(ai_service.classifier.config["PRODUCT_TYPES"].keys()) if ai_service_available and ai_service else [],
+            "supported_intents": list(get_ai_service().classifier.config["ADVANCED_INTENTS"].keys()) if ai_service_available and get_ai_service() else [],
+            "supported_entities": list(get_ai_service().classifier.config["ENTITY_RECOGNITION"].keys()) if ai_service_available and get_ai_service() else [],
+            "product_expertise": list(get_ai_service().classifier.config["PRODUCT_TYPES"].keys()) if ai_service_available and get_ai_service() else [],
             "response_strategies": [
                 "comparative_analysis",
                 "cost_analysis", 
@@ -433,17 +437,18 @@ async def analyze_query_intelligence(request: Request):
         if not query:
             raise HTTPException(status_code=400, detail="Query not provided")
         
-        if not ai_service_available or ai_service is None:
+        service = get_ai_service()
+        if not ai_service_available or service is None:
             raise HTTPException(status_code=503, detail="AI service not available for query analysis")
         
         # Classify intent
-        intent_data = ai_service.classifier.classify_intent(query)
+        intent_data = service.classifier.classify_intent(query)
         
         # Extract entities
-        entities = ai_service.classifier.extract_entities(query)
+        entities = service.classifier.extract_entities(query)
         
         # Calculate priority
-        priority = ai_service.classifier.calculate_query_priority(query, intent_data)
+        priority = service.classifier.calculate_query_priority(query, intent_data)
         
         return {
             "query": query,

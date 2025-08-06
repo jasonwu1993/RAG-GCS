@@ -548,11 +548,12 @@ class IntelligentAIService:
     """Main AI service with GPT-level intelligence and conversation awareness"""
     
     def __init__(self):
-        self.classifier = AIQueryClassifier()
-        self.generator = AIResponseGenerator()
-        self.conversation_manager = ConversationManager()
-        self.internet_service = InternetSearchService()
-        # self.validator = ResponseValidator()  # Removed - let GPT handle compliance naturally
+        # LAZY INITIALIZATION: Don't create heavy objects during __init__
+        # This prevents module import failures if any component fails to initialize
+        self._classifier = None
+        self._generator = None
+        self._conversation_manager = None
+        self._internet_service = None
         
         # Initialize ultra-intelligent routing system - DISABLED for simplicity but enable intelligent search
         # Use simpler intelligent routing in chat_router instead of complex ultra-intelligence system
@@ -563,6 +564,68 @@ class IntelligentAIService:
         
         # Initialize hotkey handler - ENABLED for consistent language responses
         self.hotkey_handler_enabled = hotkey_handler_available
+    
+    @property
+    def classifier(self):
+        """Lazy-loaded AI query classifier"""
+        if self._classifier is None:
+            try:
+                self._classifier = AIQueryClassifier()
+                log_debug("AIQueryClassifier initialized successfully")
+            except Exception as e:
+                log_debug("Failed to initialize AIQueryClassifier", {"error": str(e)})
+                # Create a minimal fallback classifier
+                self._classifier = type('MockClassifier', (), {
+                    'classify_intent': lambda self, query: {"intent": "general_inquiry", "confidence": 0.5, "strategy": "general_response", "context_requirements": [], "all_intents": []},
+                    'extract_entities': lambda self, query: {},
+                    'calculate_query_priority': lambda self, query, intent_data: 1.0,
+                    'config': {"ADVANCED_INTENTS": {}, "ENTITY_RECOGNITION": {}, "PRODUCT_TYPES": {}}
+                })()
+        return self._classifier
+    
+    @property 
+    def generator(self):
+        """Lazy-loaded AI response generator"""
+        if self._generator is None:
+            try:
+                self._generator = AIResponseGenerator()
+                log_debug("AIResponseGenerator initialized successfully")
+            except Exception as e:
+                log_debug("Failed to initialize AIResponseGenerator", {"error": str(e)})
+                # Create a minimal fallback generator
+                self._generator = type('MockGenerator', (), {})()
+        return self._generator
+    
+    @property
+    def conversation_manager(self):
+        """Lazy-loaded conversation manager"""
+        if self._conversation_manager is None:
+            try:
+                self._conversation_manager = ConversationManager()
+                log_debug("ConversationManager initialized successfully")
+            except Exception as e:
+                log_debug("Failed to initialize ConversationManager", {"error": str(e)})
+                # Create a minimal fallback conversation manager
+                self._conversation_manager = type('MockConversationManager', (), {
+                    'get_conversation_context': lambda self, session_id: [],
+                    'add_message': lambda self, session_id, role, content: None,
+                    'clear_conversation': lambda self, session_id: None,
+                    'get_recent_active_sessions': lambda self, limit=5: []
+                })()
+        return self._conversation_manager
+    
+    @property
+    def internet_service(self):
+        """Lazy-loaded internet search service"""  
+        if self._internet_service is None:
+            try:
+                self._internet_service = InternetSearchService()
+                log_debug("InternetSearchService initialized successfully")
+            except Exception as e:
+                log_debug("Failed to initialize InternetSearchService", {"error": str(e)})
+                # Create a minimal fallback internet service
+                self._internet_service = type('MockInternetService', (), {})()
+        return self._internet_service
     
     def _detect_user_language(self, text: str) -> str:
         """Enhanced language detection for consistent responses"""
@@ -1406,8 +1469,36 @@ Note: Limited current information available. Please provide expert guidance base
                 "timestamp": datetime.utcnow().isoformat()
             }
 
-# Global AI service instance
-ai_service = IntelligentAIService()
+# LAZY GLOBAL AI SERVICE INSTANCE - Prevents import failures
+_ai_service_instance = None
+
+def get_ai_service():
+    """Get AI service instance with lazy initialization and fallback"""
+    global _ai_service_instance
+    if _ai_service_instance is None:
+        try:
+            _ai_service_instance = IntelligentAIService()
+            log_debug("Global AI service instance created successfully")
+        except Exception as e:
+            log_debug("Failed to create global AI service instance", {"error": str(e)})
+            # Create minimal fallback instance
+            class MockAIService:
+                def __init__(self):
+                    self.conversation_manager = None
+                    
+                async def process_query_with_ultra_intelligence(self, query, context, session_id, **kwargs):
+                    return {
+                        "answer": "I'm experiencing technical difficulties. Please try again.",
+                        "processing_time_seconds": 0.1,
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "conversation_aware": False,
+                        "error": str(e)
+                    }
+            _ai_service_instance = MockAIService()
+    return _ai_service_instance
+
+# Use get_ai_service() function to access the AI service instance
+# This prevents module import failures in production
 
 def embed_text(text: str) -> List[float]:
     """Create embeddings with error handling"""
