@@ -94,23 +94,6 @@ curl -X POST "https://rag-gcs-718538538469.us-central1.run.app/chat/ask" \
 5. **Version Inconsistency**: Single VERSION variable pattern implemented
 6. **Circular Imports**: Simplified imports and GPT-native architecture
 
-## 🐛 KNOWN FRONTEND ISSUES
-
-### **Clair Avatar Refresh Issue**
-- **Symptom**: Clair's headshot refreshes 2+ times per message instead of staying static
-- **Expected Behavior**: Avatar should load once on init and remain static
-- **Impact**: Unnecessary visual refreshing, poor UX, bandwidth waste
-- **Location**: Frontend code (likely rag-frontend-vercel repository)
-- **Root Cause**: Avatar component re-rendering on each message/state change
-- **Backend Consideration**: Ensure API responses don't include unnecessary avatar data
-- **Frontend Solutions Needed**: 
-  - Memoize avatar component with React.memo() or useMemo()
-  - Move avatar state out of message-dependent state
-  - Use static avatar URL that doesn't change per message
-  - Prevent re-renders when only message content changes
-  - Check if avatar is being fetched in chat message responses
-  - Consider loading avatar once in app initialization, not per message
-
 ## 🎯 SUCCESS VALIDATION
 
 - New revision created → Check with `gcloud run revisions list`
