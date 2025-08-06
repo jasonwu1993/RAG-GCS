@@ -18,27 +18,19 @@ echo "📦 Production Project: $PROD_PROJECT_ID"
 echo "🔐 Service Account Project: $SA_PROJECT_ID"
 echo "🌍 Region: $REGION"
 
-# Step 1: Build the container with latest code
-echo "🏗️ Building container with latest code..."
-gcloud builds submit --tag $IMAGE_NAME --project $PROD_PROJECT_ID
-
-# Step 2: Deploy new revision (without traffic initially)
-echo "🚀 Deploying new revision to Cloud Run (no traffic initially)..."
+# Deploy directly from source (modern approach)
+echo "🚀 Deploying new revision to Cloud Run..."
 gcloud run deploy $SERVICE_NAME \
-    --image $IMAGE_NAME \
-    --platform managed \
+    --source . \
     --region $REGION \
     --project $PROD_PROJECT_ID \
     --allow-unauthenticated \
-    --cpu-boost \
-    --memory 4Gi \
-    --timeout 1000 \
+    --memory 2Gi \
     --cpu 2 \
-    --concurrency 10 \
-    --max-instances 3 \
-    --port 8080 \
+    --timeout 3600 \
     --no-traffic \
-    --set-env-vars "OPENAI_API_KEY=$(gcloud secrets versions access latest --secret=openai-api-key --project=$PROD_PROJECT_ID),GCP_PROJECT_ID=rag-backend-467204,GCS_BUCKET_NAME=rag-clair-2025,GOOGLE_DRIVE_FOLDER_ID=1pMiyyfk8hEoVVSsxMmRmobe6dmdm5sjI,DEPLOYED_INDEX_ID=rag_index_1753602198270,INDEX_ENDPOINT_ID=1251545498595098624,ENVIRONMENT=production,DEBUG=false,GPT_MODEL=gpt-4o-2024-08-06,EMBED_MODEL=text-embedding-3-small,MAX_TOKENS=2000,TEMPERATURE=0.9,SIMILARITY_THRESHOLD=0.75,TOP_K=3,GCP_REGION=us-central1"
+    --set-env-vars "ENVIRONMENT=production,GCP_PROJECT_ID=rag-backend-467204,GCS_BUCKET_NAME=rag-clair-2025,GCP_REGION=us-central1,INDEX_ENDPOINT_ID=1251545498595098624,DEPLOYED_INDEX_ID=rag_index_1753602198270,GOOGLE_DRIVE_FOLDER_ID=1pMiyyfk8hEoVVSsxMmRmobe6dmdm5sjI,GPT_MODEL=gpt-4o-2024-08-06,EMBED_MODEL=text-embedding-3-small,MAX_TOKENS=2000,TEMPERATURE=0.9,SIMILARITY_THRESHOLD=0.9,TOP_K=3" \
+    --set-secrets "OPENAI_API_KEY=openai-api-key:latest"
 
 echo "✅ New revision deployed successfully"
 

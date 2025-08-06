@@ -111,7 +111,12 @@ gcloud run deploy rag-gcs \
   --source . \
   --region us-central1 \
   --project rag-backend-467204 \
-  --allow-unauthenticated
+  --allow-unauthenticated \
+  --memory 2Gi \
+  --cpu 2 \
+  --timeout 3600 \
+  --set-env-vars "ENVIRONMENT=production,GCP_PROJECT_ID=rag-backend-467204,GCS_BUCKET_NAME=rag-clair-2025,GCP_REGION=us-central1,INDEX_ENDPOINT_ID=1251545498595098624,DEPLOYED_INDEX_ID=rag_index_1753602198270,GOOGLE_DRIVE_FOLDER_ID=1pMiyyfk8hEoVVSsxMmRmobe6dmdm5sjI,GPT_MODEL=gpt-4o-2024-08-06,EMBED_MODEL=text-embedding-3-small,MAX_TOKENS=2000,TEMPERATURE=0.9,SIMILARITY_THRESHOLD=0.9,TOP_K=3" \
+  --set-secrets "OPENAI_API_KEY=openai-api-key:latest"
 
 # Check Deployment Status (if timeout reported)
 gcloud run revisions list --service=rag-gcs --region=us-central1 --project=rag-backend-467204 --limit=5
