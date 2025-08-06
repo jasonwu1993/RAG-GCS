@@ -144,10 +144,11 @@ except ImportError as e:
     print(f"⚠️ Clair prompt enforcer not available: {e}")
     prompt_enforcer_available = False
 
-# Import hotkey handler
+# Import hotkey handler - DISABLED to allow GPT native intelligence
 try:
     from hotkey_handler import hotkey_handler
-    hotkey_handler_available = True
+    print("✅ Hotkey handler imported (DISABLED - GPT native handling enabled)")
+    hotkey_handler_available = False  # DISABLED: Let GPT handle hotkeys naturally per Clair-sys-prompt.txt
 except ImportError as e:
     print(f"⚠️ Hotkey handler not available: {e}")
     hotkey_handler_available = False
@@ -1286,21 +1287,9 @@ Note: Limited current information available. Please provide expert guidance base
                     # Extract language from user query
                     detected_language = self._detect_user_language(query)
                     
-                    # Generate contextual hotkeys based on detected language and conversation
-                    if detected_language == "chinese":
-                        contextual_hotkeys = [
-                            "A: 继续详细说明",
-                            "R: 推荐具体方案", 
-                            "E: 解释专业术语",
-                            "C: 计算保费估算"
-                        ]
-                    else:
-                        contextual_hotkeys = [
-                            "A: Continue with details",
-                            "R: Recommend plans",
-                            "E: Explain concepts", 
-                            "C: Calculate costs"
-                        ]
+                    # Let GPT generate dynamic contextual hotkeys based on conversation context
+                    # No hardcoded hotkeys - GPT will create them based on the conversation topic
+                    contextual_hotkeys = []  # Empty - GPT generates in structured response
                     
                     response_metadata = {
                         "language": detected_language,
@@ -1370,20 +1359,9 @@ Note: Limited current information available. Please provide expert guidance base
                                 })
                                 # Continue searching in case there's Chinese context later
                 
-                if detected_language == "chinese":
-                    contextual_hotkeys = [
-                        "A: 继续详细说明",
-                        "R: 推荐具体方案", 
-                        "E: 解释专业术语",
-                        "C: 计算保费估算"
-                    ]
-                else:
-                    contextual_hotkeys = [
-                        "A: Continue with details",
-                        "R: Recommend plans",
-                        "E: Explain concepts", 
-                        "C: Calculate costs"
-                    ]
+                # Let GPT generate dynamic contextual hotkeys via structured response
+                # No hardcoded hotkeys - GPT intelligently creates them based on conversation topic
+                contextual_hotkeys = []  # Empty - GPT generates dynamic hotkeys
                 
                 # Determine conversation context based on query type
                 conversation_context = "new_query"
