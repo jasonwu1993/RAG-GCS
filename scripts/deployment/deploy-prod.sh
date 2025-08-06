@@ -6,7 +6,7 @@ PROJECT_ID=$(gcloud config get-value project)
 echo "📋 Using project: $PROJECT_ID"
 
 # Set image name
-IMAGE_NAME="gcr.io/${PROJECT_ID}/clair-backend"
+IMAGE_NAME="gcr.io/${PROJECT_ID}/rag-gcs"
 echo "🐳 Image: $IMAGE_NAME"
 
 # Build image
@@ -23,7 +23,7 @@ docker push ${IMAGE_NAME}
 
 # Deploy to Cloud Run with all environment variables
 echo "🚀 Deploying to Cloud Run..."
-gcloud run deploy clair-backend \
+gcloud run deploy rag-gcs \
   --image ${IMAGE_NAME} \
   --platform managed \
   --region us-central1 \
@@ -37,7 +37,7 @@ gcloud run deploy clair-backend \
   --set-env-vars GOOGLE_SERVICE_ACCOUNT_FILE=service-account.json
 
 # Get the service URL
-SERVICE_URL=$(gcloud run services describe clair-backend --region=us-central1 --format='value(status.url)')
+SERVICE_URL=$(gcloud run services describe rag-gcs --region=us-central1 --format='value(status.url)')
 echo ""
 echo "✅ Deployment complete!"
 echo "🌐 Service URL: $SERVICE_URL"

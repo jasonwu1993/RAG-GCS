@@ -124,44 +124,25 @@ def get_openai_client():
         log_debug("Failed to get OpenAI client", {"error": str(e)})
         return None
 
-# Import intelligent routing system
-try:
-    from intelligent_routing_system import (
-        QueryIntelligenceEngine, MultiSourceOrchestrator, InformationSynthesisEngine,
-        QueryAnalysis, SourceResult, InformationSource
-    )
-    from advanced_internet_search import advanced_internet_search
-    intelligent_routing_available = True
-except ImportError as e:
-    print(f"⚠️ Intelligent routing system not available: {e}")
-    intelligent_routing_available = False
+# ULTRATHINK MISSION: Disable complex imports to eliminate circular dependencies
+# Let GPT handle everything natively through system prompt - no external processors
 
-# Import Clair system prompt enforcer
-try:
-    from clair_prompt_enforcer import clair_prompt_enforcer
-    prompt_enforcer_available = True
-except ImportError as e:
-    print(f"⚠️ Clair prompt enforcer not available: {e}")
-    prompt_enforcer_available = False
+# Disable intelligent routing system to eliminate circular imports
+print("🎯 ULTRATHINK: Intelligent routing disabled - using GPT-native intelligence")
+intelligent_routing_available = False
 
-# Import hotkey handler - DISABLED to allow GPT native intelligence
-try:
-    from hotkey_handler import hotkey_handler
-    print("✅ Hotkey handler imported (DISABLED - GPT native handling enabled)")
-    hotkey_handler_available = False  # DISABLED: Let GPT handle hotkeys naturally per Clair-sys-prompt.txt
-except ImportError as e:
-    print(f"⚠️ Hotkey handler not available: {e}")
-    hotkey_handler_available = False
+# Disable Clair system prompt enforcer to eliminate circular imports  
+print("🎯 ULTRATHINK: Prompt enforcer disabled - GPT handles everything through system prompt")
+prompt_enforcer_available = False
 
-# Import response cache
-try:
-    from response_cache import response_cache
-    from config import CACHE_RESPONSES
-    cache_available = True
-except ImportError as e:
-    print(f"⚠️ Response cache not available: {e}")
-    cache_available = False
-    CACHE_RESPONSES = False
+# Disable hotkey handler completely to eliminate circular imports - GPT generates dynamic hotkeys
+print("🎯 ULTRATHINK: Hotkey handler completely disabled - GPT native dynamic hotkey generation enabled")
+hotkey_handler_available = False
+
+# Disable response cache to eliminate circular imports
+print("🎯 ULTRATHINK: Response cache disabled to eliminate circular imports")
+cache_available = False
+CACHE_RESPONSES = False
 
 class ConversationManager:
     """Manages conversation context and memory for GPT-level intelligence"""
@@ -767,154 +748,56 @@ class IntelligentAIService:
         
         start_time = datetime.utcnow()
         
-        # Check for hotkey input first (even if ultra-intelligence is disabled)
-        if self.hotkey_handler_enabled and hotkey_handler.is_hotkey(query):
-            log_debug("HOTKEY DETECTED - Starting language analysis", {
-                "hotkey": query,
-                "session_id": session_id,
-                "handler_enabled": self.hotkey_handler_enabled
-            })
-            
-            # Determine language preference
-            conversation_history = []
-            if CONVERSATION_MEMORY_ENABLED:
-                conversation_history = self.conversation_manager.get_conversation_context(session_id)
-            
-            log_debug("Conversation history retrieved", {
-                "session_id": session_id,
-                "history_length": len(conversation_history),
-                "recent_messages": [{"role": msg.get("role", ""), "content": msg.get("content", "")[:50]} for msg in conversation_history[-4:]]
-            })
-            
-            # Intelligently determine language based on conversation history
-            needs_chinese = False  # Default to English unless Chinese context is found
-            
-            # Check conversation history for language context (BOTH user AND assistant messages)
-            for msg in reversed(conversation_history[-8:]):  # Check last 4 exchanges
-                msg_role = msg.get("role", "")
-                msg_content = msg.get("content", "")
-                
-                # Check both user and assistant messages for language clues
-                if msg_role in ["user", "assistant"] and len(msg_content.strip()) > 2:
-                    # For user messages, ignore single letter hotkeys
-                    if msg_role == "user" and len(msg_content.strip()) <= 2:
-                        continue
-                    
-                    detected_lang = self._detect_user_language(msg_content)
-                    if detected_lang == "chinese":
-                        needs_chinese = True
-                        log_debug("HOTKEY LANGUAGE: Chinese found - setting needs_chinese=True", {
-                            "source": msg_role,
-                            "content_sample": msg_content[:50],
-                            "session_id": session_id,
-                            "detected_language": detected_lang
-                        })
-                        break
-                    elif detected_lang == "english":
-                        needs_chinese = False
-                        log_debug("Hotkey language detection: English found", {
-                            "source": msg_role, 
-                            "content_sample": msg_content[:50],
-                            "session_id": session_id
-                        })
-                        # Continue checking - Chinese takes priority if found later
-            
-            log_debug("HOTKEY FINAL DECISION", {
-                "session_id": session_id,
-                "hotkey": query,
-                "needs_chinese": needs_chinese,
-                "will_use_chinese_response": needs_chinese
-            })
-            
-            hotkey_response = hotkey_handler.get_hotkey_response(query, needs_chinese)
-            
-            if hotkey_response:
-                # Save conversation for natural flow
-                if CONVERSATION_MEMORY_ENABLED:
-                    self.conversation_manager.add_exchange(session_id, query, hotkey_response)
-                
-                return {
-                    "answer": hotkey_response,
-                    "query": query,
-                    "session_id": session_id,
-                    "hotkey_processed": True,
-                    "conversation_aware": len(conversation_history) > 0,
-                    "processing_time_seconds": (datetime.utcnow() - start_time).total_seconds(),
-                    "clair_enforcement": {
-                        "enforcer_enabled": False,
-                        "enforcement_applied": False,
-                        "language_enforcement": needs_chinese,
-                        "hotkey_response": True
-                    },
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+        # ULTRATHINK: All hotkey processing now handled natively by GPT through system prompt
+        # Single letters will be processed as regular queries with conversation context
+        # GPT will recognize hotkey patterns and respond appropriately with dynamic suggestions
+        
+        log_debug("ULTRATHINK: Processing query with GPT-native intelligence", {
+            "query": query,
+            "session_id": session_id,
+            "is_likely_hotkey": len(query.strip()) <= 2,
+            "gpt_native_processing": True
+        })
         
         if not self.ultra_intelligence_enabled:
             # Fallback to standard GPT processing
             return await self.process_query_with_gpt_intelligence(query, context, session_id, filters)
         
         try:
-            # 1. Ultra-intelligent query analysis
-            analysis = await self.query_intelligence.analyze_query(query, context)
+            # ULTRATHINK: Simplified processing - let GPT handle all intelligence through system prompt
+            log_debug("ULTRATHINK: Using simplified GPT-native processing without complex routing")
             
-            log_debug("Ultra-intelligent query analysis", {
-                "query_type": analysis.query_type.value,
-                "confidence": analysis.confidence,
-                "requires_current": analysis.requires_current_info,
-                "requires_specific": analysis.requires_specific_docs,
-                "sources": [s.value for s in analysis.priority_sources],
-                "strategy": analysis.search_strategy
-            })
-            
-            # 2. Execute multi-source search strategy
-            source_results = await self.multi_source_orchestrator.execute_search_strategy(
-                query=query,
-                analysis=analysis,
-                vertex_search_func=self._create_vertex_search_wrapper(context, vertex_search_func),
-                internet_search_func=self._create_internet_search_wrapper()
-            )
-            
-            # 3. Synthesize information from multiple sources
-            synthesis_result = self.synthesis_engine.synthesize_results(source_results, query, analysis)
-            
-            # 4. Get conversation history for context
+            # Get conversation history for natural context
             conversation_history = []
             if CONVERSATION_MEMORY_ENABLED:
                 conversation_history = self.conversation_manager.get_conversation_context(session_id)
             
-            # 5. Build ultra-intelligent message context
+            # Build natural message context for GPT-native processing
             messages = [
                 {"role": "system", "content": CLAIR_SYSTEM_PROMPT_ACTIVE}
             ]
             
-            log_debug("System prompt being sent to OpenAI", {
+            log_debug("ULTRATHINK: System prompt loaded for GPT-native processing", {
                 "prompt_length": len(CLAIR_SYSTEM_PROMPT_ACTIVE),
                 "prompt_preview": CLAIR_SYSTEM_PROMPT_ACTIVE[:200] + "..." if len(CLAIR_SYSTEM_PROMPT_ACTIVE) > 200 else CLAIR_SYSTEM_PROMPT_ACTIVE
             })
             
-            # Add conversation history
+            # Add conversation history for natural flow
             messages.extend(conversation_history)
             
-            # 6. Create enhanced user message with synthesized information
-            if synthesis_result["synthesized_content"]:
-                user_message = f"""COMPREHENSIVE RESEARCH CONTEXT:
-{synthesis_result["synthesized_content"]}
-
-ANALYSIS METADATA:
-- Query Type: {analysis.query_type.value}
-- Information Sources: {', '.join([s.value for s in analysis.priority_sources])}
-- Synthesis Confidence: {synthesis_result["confidence_score"]:.2f}
-- Total Sources Consulted: {synthesis_result["synthesis_metadata"]["sources_used"]}
-
-CLIENT QUESTION: {query}
-
-Please provide expert advice based on this comprehensive research, following your role as Clair, the expert financial advisor."""
+            # Create natural user message - let GPT handle intelligence natively  
+            if context.strip():
+                user_message = f"Here's relevant information from our documents:\n\n{context}\n\n{query}"
             else:
-                user_message = f"""CLIENT QUESTION: {query}
-
-Note: Limited current information available. Please provide expert guidance based on your knowledge base and emphasize the need for current information verification."""
+                user_message = query
             
             messages.append({"role": "user", "content": user_message})
+            
+            log_debug("ULTRATHINK: Natural message constructed for GPT", {
+                "has_context": bool(context.strip()),
+                "conversation_history_length": len(conversation_history),
+                "user_message_length": len(user_message)
+            })
             
             # 7. Generate ultra-intelligent response with Structured Outputs
             client = get_openai_client()
@@ -991,39 +874,31 @@ Note: Limited current information available. Please provide expert guidance base
             if CONVERSATION_MEMORY_ENABLED:
                 self.conversation_manager.add_exchange(session_id, query, answer)
             
-            # 9. Apply Clair system prompt enforcement
-            if self.prompt_enforcer_enabled:
-                answer, enforcement_result = clair_prompt_enforcer.enforce_system_prompt(query, answer)
-            else:
-                enforcement_result = None
+            # 9. ULTRATHINK: No prompt enforcement needed - GPT handles everything through system prompt
+            enforcement_result = None
+            log_debug("ULTRATHINK: GPT-native processing - no external prompt enforcement")
             
             # 10. Skip response validation - let GPT handle compliance naturally
             validation_results = {"compliance_score": 1.0, "issues": [], "recommendations": []}
             
-            # 11. Create comprehensive result
+            # Create GPT-native result with structured outputs
             result = {
                 "answer": answer,
                 "query": query,
                 "session_id": session_id,
                 "ultra_intelligence_metadata": {
-                    "query_analysis": {
-                        "type": analysis.query_type.value,
-                        "confidence": analysis.confidence,
-                        "complexity_score": analysis.complexity_score,
-                        "search_strategy": analysis.search_strategy
-                    },
-                    "information_synthesis": synthesis_result,
-                    "sources_used": [s.value for s in analysis.priority_sources],
-                    "multi_source_enabled": True
+                    "gpt_native_processing": True,
+                    "structured_outputs_enabled": ENABLE_STRUCTURED_OUTPUTS,
+                    "system_prompt_intelligence": True,
+                    "dynamic_hotkeys_enabled": True
                 },
                 "conversation_aware": len(conversation_history) > 0,
                 "processing_time_seconds": (datetime.utcnow() - start_time).total_seconds(),
+                "hotkey_suggestions": response_metadata.get("hotkey_suggestions", []),
                 "clair_enforcement": {
-                    "enforcer_enabled": self.prompt_enforcer_enabled,
-                    "enforcement_applied": enforcement_result.enforcement_applied if enforcement_result else False,
-                    "language_enforcement": enforcement_result.needs_chinese if enforcement_result else False,
-                    "mandatory_links": enforcement_result.mandatory_links if enforcement_result else [],
-                    "trigger_type": enforcement_result.trigger_type if enforcement_result else "none"
+                    "enforcer_enabled": False,
+                    "gpt_native_enforcement": True,
+                    "system_prompt_active": True
                 },
                 "compliance_validation": validation_results,
                 "token_usage": {
@@ -1035,12 +910,11 @@ Note: Limited current information available. Please provide expert guidance base
                 "timestamp": datetime.utcnow().isoformat()
             }
             
-            log_debug("Ultra-intelligent processing completed", {
+            log_debug("ULTRATHINK: GPT-native processing completed successfully", {
                 "session_id": session_id,
-                "query_type": analysis.query_type.value,
-                "sources_used": len(source_results),
-                "synthesis_confidence": synthesis_result["confidence_score"],
-                "compliance_score": validation_results["compliance_score"],
+                "conversation_aware": result["conversation_aware"],
+                "structured_outputs": ENABLE_STRUCTURED_OUTPUTS,
+                "dynamic_hotkeys": len(response_metadata.get("hotkey_suggestions", [])) > 0,
                 "total_processing_time": result["processing_time_seconds"]
             })
             
@@ -1096,15 +970,8 @@ Note: Limited current information available. Please provide expert guidance base
         
         start_time = datetime.utcnow()
         
-        # Check cache first if available and enabled
-        if cache_available and CACHE_RESPONSES:
-            cached_response = response_cache.get(query, session_id)
-            if cached_response:
-                # Update processing time to show cached response speed
-                cached_response["processing_time_seconds"] = (datetime.utcnow() - start_time).total_seconds()
-                cached_response["cached_response"] = True
-                log_debug("Returning cached response", {"query": query[:50]})
-                return cached_response
+        # ULTRATHINK: Cache disabled to eliminate circular imports - use GPT-native processing
+        log_debug("ULTRATHINK: Cache disabled - using fresh GPT-native processing", {"query": query[:50]})
         
         # 1. Get conversation history for natural flow
         conversation_history = []
@@ -1247,6 +1114,7 @@ Note: Limited current information available. Please provide expert guidance base
                         performance_analytics.track_conversation_continuity(context_type, session_id, quality_score)
                         
                         # Agentic effectiveness tracking
+                        agentic_data = structured_response.get("agentic_metadata", {})
                         if agentic_data:
                             reflection_quality = len(agentic_data.get("reflection_notes", "")) // 20  # Rough quality metric
                             planning_depth = len(agentic_data.get("planning_steps", []))
@@ -1413,9 +1281,8 @@ Note: Limited current information available. Please provide expert guidance base
                 "cached_response": False
             }
             
-            # Cache the result for future performance optimization
-            if cache_available and CACHE_RESPONSES:
-                response_cache.put(query, result, session_id)
+            # ULTRATHINK: Cache disabled to eliminate circular imports
+            log_debug("ULTRATHINK: Cache disabled - result not cached")
             
             log_debug("Natural conversation processed", {
                 "session_id": session_id,

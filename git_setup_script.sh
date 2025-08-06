@@ -131,7 +131,7 @@ Clair (随时守护您财富的智能专家) is an intelligent AI financial advi
 ```bash
 # Clone repository
 git clone <your-repo-url>
-cd clair-backend
+cd rag-gcs
 
 # Install dependencies
 pip install -r requirements.txt
@@ -170,10 +170,10 @@ Copy `.env.example` to `.env` and configure:
 
 ```bash
 # Build image
-docker build -t clair-backend .
+docker build -t rag-gcs .
 
 # Run container
-docker run -p 8000:8000 --env-file .env clair-backend
+docker run -p 8000:8000 --env-file .env rag-gcs
 ```
 
 ## 🚀 Production Deployment
@@ -181,7 +181,7 @@ docker run -p 8000:8000 --env-file .env clair-backend
 ### Google Cloud Run
 ```bash
 # Deploy to Cloud Run
-gcloud run deploy clair-backend \
+gcloud run deploy rag-gcs \
   --source . \
   --platform managed \
   --region us-central1 \
@@ -239,7 +239,7 @@ cat > docker-compose.yml << 'EOF'
 version: '3.8'
 
 services:
-  clair-backend:
+  rag-gcs:
     build: .
     ports:
       - "8000:8000"
@@ -265,7 +265,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - clair-backend
+      - rag-gcs
     profiles:
       - production
 EOF
@@ -305,7 +305,7 @@ echo "🚀 Deploying to production..."
 
 # Build and push Docker image
 PROJECT_ID=${GCP_PROJECT_ID}
-IMAGE_NAME="gcr.io/${PROJECT_ID}/clair-backend"
+IMAGE_NAME="gcr.io/${PROJECT_ID}/rag-gcs"
 
 # Build image
 docker build -t ${IMAGE_NAME} .
@@ -314,7 +314,7 @@ docker build -t ${IMAGE_NAME} .
 docker push ${IMAGE_NAME}
 
 # Deploy to Cloud Run
-gcloud run deploy clair-backend \
+gcloud run deploy rag-gcs \
   --image ${IMAGE_NAME} \
   --platform managed \
   --region us-central1 \

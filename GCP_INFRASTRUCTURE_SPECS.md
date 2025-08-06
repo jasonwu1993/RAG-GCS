@@ -7,7 +7,7 @@ This document outlines the recommended Google Cloud Platform (GCP) infrastructur
 
 ### 1. **Google Cloud Run Service**
 ```yaml
-Service: clair-backend-api
+Service: rag-gcs-api
 CPU: 2 vCPUs
 Memory: 4 GB
 Min Instances: 1

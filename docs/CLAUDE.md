@@ -31,13 +31,13 @@ pytest --cov=. tests/
 ### Docker Development
 ```bash
 # Build image
-docker build -t clair-backend .
+docker build -t rag-gcs .
 
 # Run container
-docker run -p 8080:8080 --env-file .env clair-backend
+docker run -p 8080:8080 --env-file .env rag-gcs
 
 # Deploy to Google Cloud Run
-gcloud run deploy clair-backend --source . --platform managed --region us-central1
+gcloud run deploy rag-gcs --source . --platform managed --region us-central1
 ```
 
 ### Environment Setup

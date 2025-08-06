@@ -1,5 +1,6 @@
 # OPTIMIZED DOCKERFILE FOR FAST CLOUD RUN DEPLOYMENTS
 # Fixes deployment timeout issues and startup failures
+# CACHE BUST: 2025-08-06-22:30 - FIXED AI SERVICE AND PRODUCTION OPTIMIZATIONS
 
 FROM python:3.11-slim
 
@@ -17,20 +18,16 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# OPTIMIZATION 3: Copy only essential files and use fast startup
-COPY main_modular_fast.py .
-COPY config.py .
-COPY core.py .
-COPY ai_service.py .
-COPY chat_router.py .
-COPY documents_router.py .
-COPY search_router.py .
-COPY admin_router.py .
-COPY google_drive.py .
-COPY Clair-sys-prompt.txt .
-COPY gcp-credentials.json .
+# Copy all application files (like working deployments did)
+COPY . ./
+# Remove unnecessary files and conflicting directories
+RUN rm -rf rag-frontend-vercel/ tests/ *.md src/ run_server_graceful.py || true
+# Ensure we have the system prompt file
+RUN ls -la Clair-sys-prompt.txt || echo "Warning: Clair-sys-prompt.txt not found"
+# Debug: Show what main files exist
+RUN echo "=== MAIN FILES AFTER CLEANUP ===" && ls -la main*.py
 
-# OPTIMIZATION 4: Set optimal environment variables for Cloud Run
+# Set environment variables for Cloud Run with production optimizations
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -52,8 +49,8 @@ EXPOSE 8080
 # OPTIMIZATION 7: Remove health check during startup (Cloud Run handles this)
 # This prevents startup conflicts
 
-# OPTIMIZATION 8: Use fast startup module with timeout handling
-CMD ["python", "-m", "uvicorn", "main_modular_fast:app", \
+# Run with production optimizations and timeout handling
+CMD ["python", "-m", "uvicorn", "main_modular:app", \
      "--host", "0.0.0.0", \
      "--port", "8080", \
      "--timeout-keep-alive", "30", \
