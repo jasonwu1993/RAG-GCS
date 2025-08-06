@@ -1,6 +1,7 @@
 # Core Services and Shared Utilities for Enhanced RAG Clair System
 
 import os
+import sys
 import json
 import asyncio
 import threading
@@ -13,6 +14,14 @@ from googleapiclient.discovery import build
 from openai import OpenAI
 from dotenv import load_dotenv
 from config import *
+
+# Import VERSION from main_modular to ensure consistency
+try:
+    from main_modular import VERSION, BUILD_DATE
+except ImportError:
+    # Fallback if main_modular import fails
+    VERSION = "***"
+    BUILD_DATE = "***"
 
 # SECURE ENVIRONMENT LOADING - CONDITIONAL BASED ON DEPLOYMENT
 # ================================================================
@@ -374,7 +383,7 @@ def health_check() -> Dict[str, Any]:
     
     health_status = {
         "status": "healthy",
-        "version": "6.4-CHAT-ENDPOINTS-CLAIR-AI",  # Updated to match main_modular.py version
+        "version": VERSION,
         "timestamp": datetime.utcnow().isoformat(),
         "services": get_service_status(),
         "global_state": global_state.get_status()

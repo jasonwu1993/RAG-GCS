@@ -23,8 +23,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 # System identification - define early for fallback functions  
-VERSION = "6.9-HOTKEYS-FIXED-DEPLOYMENT"
-BUILD_DATE = "2025-08-06-22:30"
+VERSION = "6.11-SINGLE-VERSION-VARIABLE"
+BUILD_DATE = "2025-08-06-23:15"
 
 # Import core components only - simplified for debugging
 core_available = False
