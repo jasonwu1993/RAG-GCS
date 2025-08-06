@@ -56,7 +56,7 @@ VOICE_CONFIG = {
 }
 
 # Structured Outputs Configuration (GPT-4o-2024-08-06) 
-ENABLE_STRUCTURED_OUTPUTS = True  # RE-ENABLED with fixed schema
+ENABLE_STRUCTURED_OUTPUTS = True  # ULTRATHINK MISSION: Dynamic GPT hotkeys enabled
 # ChatGPT-Style Structured Response Schema (Fixed for OpenAI Structured Outputs API)
 STRUCTURED_OUTPUT_SCHEMA = {
     "type": "object",
