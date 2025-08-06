@@ -167,17 +167,24 @@ async def enhanced_ask_question(request: Request):
                 # This is a hotkey - try to find the most recent active session
                 try:
                     from ai_service import ai_service
-                    recent_sessions = ai_service.conversation_manager.get_recent_active_sessions(limit=5)
-                    if recent_sessions:
-                        session_id = recent_sessions[0]  # Use most recent session
-                        log_debug("Hotkey without session_id - using most recent session", {
-                            "hotkey": query,
-                            "recovered_session_id": session_id,
-                            "recent_sessions": recent_sessions
-                        })
+                    if ai_service and hasattr(ai_service, 'conversation_manager'):
+                        recent_sessions = ai_service.conversation_manager.get_recent_active_sessions(limit=5)
+                        if recent_sessions:
+                            session_id = recent_sessions[0]  # Use most recent session
+                            log_debug("Hotkey without session_id - using most recent session", {
+                                "hotkey": query,
+                                "recovered_session_id": session_id,
+                                "recent_sessions": recent_sessions
+                            })
+                        else:
+                            session_id = f"web_session_{int(datetime.utcnow().timestamp())}"
+                            log_debug("Hotkey without session_id - no recent sessions found", {
+                                "hotkey": query,
+                                "new_session_id": session_id
+                            })
                     else:
                         session_id = f"web_session_{int(datetime.utcnow().timestamp())}"
-                        log_debug("Hotkey without session_id - no recent sessions found", {
+                        log_debug("Hotkey without session_id - AI service not available", {
                             "hotkey": query,
                             "new_session_id": session_id
                         })
@@ -279,6 +286,9 @@ async def clear_conversation(request: Request):
         if not session_id:
             raise HTTPException(status_code=400, detail="Session ID required")
         
+        if not ai_service_available or ai_service is None:
+            raise HTTPException(status_code=503, detail="AI service not available")
+            
         ai_service.conversation_manager.clear_conversation(session_id)
         
         return {
@@ -299,6 +309,9 @@ async def get_conversation_status(session_id: str):
     track_function_entry("get_conversation_status")
     
     try:
+        if not ai_service_available or ai_service is None:
+            raise HTTPException(status_code=503, detail="AI service not available")
+            
         conversation_history = ai_service.conversation_manager.get_conversation_context(session_id)
         
         return {
@@ -383,9 +396,9 @@ async def get_chat_capabilities():
                 "similarity_threshold": SIMILARITY_THRESHOLD,
                 "max_results": TOP_K
             },
-            "supported_intents": list(ai_service.classifier.config["ADVANCED_INTENTS"].keys()),
-            "supported_entities": list(ai_service.classifier.config["ENTITY_RECOGNITION"].keys()),
-            "product_expertise": list(ai_service.classifier.config["PRODUCT_TYPES"].keys()),
+            "supported_intents": list(ai_service.classifier.config["ADVANCED_INTENTS"].keys()) if ai_service_available and ai_service else [],
+            "supported_entities": list(ai_service.classifier.config["ENTITY_RECOGNITION"].keys()) if ai_service_available and ai_service else [],
+            "product_expertise": list(ai_service.classifier.config["PRODUCT_TYPES"].keys()) if ai_service_available and ai_service else [],
             "response_strategies": [
                 "comparative_analysis",
                 "cost_analysis", 
@@ -419,6 +432,9 @@ async def analyze_query_intelligence(request: Request):
         
         if not query:
             raise HTTPException(status_code=400, detail="Query not provided")
+        
+        if not ai_service_available or ai_service is None:
+            raise HTTPException(status_code=503, detail="AI service not available for query analysis")
         
         # Classify intent
         intent_data = ai_service.classifier.classify_intent(query)
