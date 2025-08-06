@@ -104,11 +104,13 @@ print("🎯 Using Clair-sys-prompt.txt for professional financial advisor person
 print("📋 DOCKERFILE DEPLOYMENT - This should show main_modular.py is running!")
 print("📁 Working directory:", os.getcwd())
 print("📁 System prompt file exists:", os.path.exists("Clair-sys-prompt.txt"))
+print("🔥 ULTRATHINK MISSION: Dynamic GPT hotkeys enabled with structured outputs")
 
 # Debug: Show what config is loaded
-from config import CLAIR_GREETING, CLAIR_SYSTEM_PROMPT_ACTIVE
+from config import CLAIR_GREETING, CLAIR_SYSTEM_PROMPT_ACTIVE, ENABLE_STRUCTURED_OUTPUTS
 print("📝 Greeting:", CLAIR_GREETING[:50] + "...")
 print("📝 System prompt (first 100 chars):", CLAIR_SYSTEM_PROMPT_ACTIVE[:100] + "...")
+print(f"🔧 ENABLE_STRUCTURED_OUTPUTS: {ENABLE_STRUCTURED_OUTPUTS} - ULTRATHINK DYNAMIC HOTKEYS")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
