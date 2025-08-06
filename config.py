@@ -55,9 +55,9 @@ VOICE_CONFIG = {
     "interruption_handling": True
 }
 
-# Structured Outputs Configuration (GPT-4o-2024-08-06)
-ENABLE_STRUCTURED_OUTPUTS = True  # ENABLED - schema validation fixed
-# ChatGPT-Style Structured Response Schema (Simplified but Extensible)
+# Structured Outputs Configuration (GPT-4o-2024-08-06) 
+ENABLE_STRUCTURED_OUTPUTS = True  # RE-ENABLED with fixed schema
+# ChatGPT-Style Structured Response Schema (Fixed for OpenAI Structured Outputs API)
 STRUCTURED_OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -78,7 +78,7 @@ STRUCTURED_OUTPUT_SCHEMA = {
         "hotkey_suggestions": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "Language-consistent hotkey suggestions in the same language as the response"
+            "description": "Language-consistent dynamic hotkey suggestions in the same language as the response"
         },
         "confidence_level": {
             "type": "string",
@@ -88,13 +88,28 @@ STRUCTURED_OUTPUT_SCHEMA = {
         "agentic_metadata": {
             "type": "object",
             "properties": {
-                "reflection_notes": {"type": "string"},
-                "planning_steps": {"type": "array", "items": {"type": "string"}},
-                "tool_recommendations": {"type": "array", "items": {"type": "string"}},
-                "context_synthesis": {"type": "string"}
+                "reflection_notes": {
+                    "type": "string",
+                    "description": "Self-reflection on response quality and completeness"
+                },
+                "planning_steps": {
+                    "type": "array", 
+                    "items": {"type": "string"},
+                    "description": "Planning process breakdown for complex queries"
+                },
+                "tool_recommendations": {
+                    "type": "array", 
+                    "items": {"type": "string"},
+                    "description": "Recommended tools or resources for the user"
+                },
+                "context_synthesis": {
+                    "type": "string",
+                    "description": "Analysis of how available context matches user needs"
+                }
             },
-            "additionalProperties": true,
-            "description": "Advanced AI reasoning metadata"
+            "required": ["reflection_notes", "planning_steps", "tool_recommendations", "context_synthesis"],
+            "additionalProperties": False,
+            "description": "Advanced AI reasoning metadata with consistent schema structure"
         }
     },
     "required": ["response", "language", "conversation_context", "hotkey_suggestions", "confidence_level", "agentic_metadata"],
