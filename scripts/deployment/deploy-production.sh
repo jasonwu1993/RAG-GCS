@@ -5,7 +5,7 @@ echo "🚀 Deploying Clair RAG System to Production..."
 
 # Configuration
 PROJECT_ID="rag-backend-467204"
-SERVICE_NAME="clair-rag"
+SERVICE_NAME="rag-gcs"
 REGION="us-central1"
 
 # Set Google Cloud project
